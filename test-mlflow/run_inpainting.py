@@ -8,7 +8,9 @@ from torch.utils.data import DataLoader
 from mattergen.common.data.collate import collate
 from functools import partial
 from pymatgen.analysis.structure_matcher import StructureMatcher
-from pymatgen.core import Composition
+from pymatgen.core import Composition, Structure
+import bz2
+import json
 from prettytable import PrettyTable
 from mattergen.common.utils.eval_utils import save_structures
 from dbcsi_inpainting.utils import (
@@ -33,14 +35,19 @@ n_corrector_steps = 10
 n_resample_steps = 3
 
 
-mc3d_structures_with_H = load_mc3d_with_H()
+# mc3d_structures_with_H = load_mc3d_with_H()
 formulas_to_choose = get_mattergen_unknown_formulas()
 
-structures_w_H = [
-    s for s in mc3d_structures_with_H if (
-        len(s.sites) < 30 and Composition(s.get_formula()).reduced_formula in formulas_to_choose
-        ) #if 20 < len(s.sites) <= 35
-]
+# structures_w_H = [
+#     s for s in mc3d_structures_with_H if (
+#         len(s.sites) < 30 and Composition(s.get_formula()).reduced_formula in formulas_to_choose
+#         ) #if 20 < len(s.sites) <= 35
+# ]
+
+with open('mc3d_structures_with_H.bz2', 'rb') as f:
+    decompressed_data = bz2.decompress(f.read())
+structures_json = json.loads(decompressed_data.decode('utf-8'))
+structures_w_H = [Structure.from_dict(s) for s in structures_json]
 
 structures_w_H_subset =[s.get_pymatgen_structure() for s in np.random.choice(structures_w_H, N_structures)]
 print(f'Number of unique formulas: {len(set([s.composition.reduced_formula for s in structures_w_H_subset]))}')
