@@ -93,7 +93,10 @@ mlflow.autolog()
 # n_corrector_steps = 5
 # n_resample_steps = 3
 
-for N_steps in [20, 50, 100, 200, 500, 1000]:
+for N_steps in [
+    # 20, 50, 100, 200, 500#, 
+    1000
+    ]:
     for coordinates_snr in [0.2, 0.4, 0.6]:
         for n_corrector_steps in [1, 2, 5, 10]:
             for n_resample_steps in [1, 3, 5]:
@@ -111,7 +114,13 @@ for N_steps in [20, 50, 100, 200, 500, 1000]:
                 }
                 # Create a unique directory path based on the parameters.
                 param_str = '__'.join([f"{key}-{value}" for key, value in params.items()])
+                
                 results_path = Path(param_str)
+                
+                if results_path.exists():
+                    print(f'...Path {param_str} already exists...')
+                    continue
+                
                 results_path.mkdir(parents=True, exist_ok=True)
 
                 with mlflow.start_run(run_name=param_str) as run:
