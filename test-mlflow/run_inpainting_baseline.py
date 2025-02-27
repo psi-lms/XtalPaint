@@ -88,10 +88,6 @@ mlflow.set_experiment("parameter-screening")
 
 mlflow.autolog()
 
-# N_steps = 200
-# coordinates_snr = 0.2
-# n_corrector_steps = 5
-# n_resample_steps = 3
 
 for N_steps in [20, 50, 100, 200, 500, 1000]:
     for coordinates_snr in [0.2, 0.4, 0.6]:

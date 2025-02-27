@@ -258,7 +258,7 @@ class CustomGuidedPredictorCorrectorRePaint(GuidedPredictorCorrector):
                         }
                         samples_means: dict[str, Tuple[torch.Tensor, torch.Tensor]] = apply(
                             fns=fns,
-                            broadcast={"t": t+dt},
+                            broadcast={"t": t+dt, "dt": dt},
                             x=batch,
                             score=score,
                             batch_idx=self._multi_corruption._get_batch_indices(batch),

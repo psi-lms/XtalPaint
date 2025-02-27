@@ -1,4 +1,3 @@
-from aiida import orm, load_profile
 import numpy as np
 from typing import Callable, Sequence
 from pymatgen.core import Structure, Composition
@@ -66,6 +65,8 @@ def _add_n_sites_to_be_found(structure, n_sites, element):
     return structure
 
 def load_mc3d_with_H():
+    from aiida import orm, load_profile
+
     load_profile()
 
     query_structures_w_H = orm.QueryBuilder().append(
@@ -76,12 +77,12 @@ def load_mc3d_with_H():
     
     return query_structures_w_H.all(flat=True)
 
-def get_mattergen_unknown_formulas():
+def get_mattergen_unknown_formulas(path):
     """Get the formulas that are not in the training or validation set of MatterGen."""
-    with open('/home/reents_t/project/mlip/git/diffusion-based-crystal-structure-inpainting/formula_not_in_train.json', 'r') as f:
+    with open(f'{path}/formula_not_in_train.json', 'r') as f:
         formula_not_in_train = json.load(f)
 
-    with open('/home/reents_t/project/mlip/git/diffusion-based-crystal-structure-inpainting/formula_not_in_val.json', 'r') as f:
+    with open(f'{path}/formula_not_in_val.json', 'r') as f:
         formula_not_in_val = json.load(f)
 
     formulas_to_choose = set(formula_not_in_train).union(set(formula_not_in_val))

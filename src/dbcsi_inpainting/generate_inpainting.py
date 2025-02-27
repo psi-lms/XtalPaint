@@ -5,11 +5,12 @@ from pathlib import Path
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from pymatgen.core import Structure
+import os
 
 from mattergen.common.data.num_atoms_distribution import NUM_ATOMS_DISTRIBUTIONS
 from mattergen.common.data.types import TargetProperty
 from mattergen.common.data.types import TargetProperty
-from mattergen.common.utils.eval_utils import MatterGenCheckpointInfo
+from mattergen.common.utils.data_classes import MatterGenCheckpointInfo, PRETRAINED_MODEL_NAME
 from mattergen.generator import CrystalGenerator, draw_samples_from_sampler
 
 
@@ -77,8 +78,9 @@ class CrystalGeneratorInpainting(CrystalGenerator):
 
 def generate_reconstructed_structures(
     structures_to_reconstruct: DataLoader,
-    model_path: str = '/home/reents_t/project/mlip/git/mattergen/checkpoints/mattergen_base',
+    pretrained_name: PRETRAINED_MODEL_NAME | None = 'mattergen_base',
     output_path: str = None,
+    model_path: str = None,     # '/data/user/reents_t/projects/mlip/git/mattergen/checkpoints/mattergen_base',
     batch_size: int = 10,
     num_batches: int = 1,
     config_overrides: list[str] | None = None,
@@ -111,21 +113,27 @@ def generate_reconstructed_structures(
 
     NOTE: When specifying dictionary values via the CLI, make sure there is no whitespace between the key and value, e.g., `--properties_to_condition_on={key1:value1}`.
     """
-    # if not os.path.exists(output_path):
-    #     os.makedirs(output_path)
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
 
     sampling_config_overrides = sampling_config_overrides or []
     config_overrides = config_overrides or []
     properties_to_condition_on = properties_to_condition_on or {}
     target_compositions = target_compositions or []
 
-    checkpoint_info = MatterGenCheckpointInfo(
-        model_path=Path(model_path).resolve(),
-        load_epoch=checkpoint_epoch,
-        config_overrides=config_overrides,
-        strict_checkpoint_loading=strict_checkpoint_loading,
-    )
+    if pretrained_name is not None:
+        checkpoint_info = MatterGenCheckpointInfo.from_hf_hub(
+            pretrained_name, config_overrides=config_overrides
+        )
+    else:
+        checkpoint_info = MatterGenCheckpointInfo(
+            model_path=Path(model_path).resolve(),
+            load_epoch=checkpoint_epoch,
+            config_overrides=config_overrides,
+            strict_checkpoint_loading=strict_checkpoint_loading,
+        )
     _sampling_config_path = Path(sampling_config_path) if sampling_config_path is not None else None
+
     generator = CrystalGeneratorInpainting(
         dataloader=structures_to_reconstruct,
         checkpoint_info=checkpoint_info,
@@ -142,4 +150,4 @@ def generate_reconstructed_structures(
         target_compositions_dict=target_compositions,
     )
     
-    return generator.generate(output_dir='./')
+    return generator.generate(output_dir=Path(output_path))
