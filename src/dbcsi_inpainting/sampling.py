@@ -13,7 +13,8 @@ from dbcsi_inpainting.evaluation import evaluate_results  # Assuming you created
 GUIDED_PREDICTOR_CORRECTOR_MAPPING: Dict[str, str] = {
     'baseline': 'mattergen.diffusion.sampling.classifier_free_guidance.GuidedPredictorCorrector.from_pl_module',
     'baseline-with-noise': 'dbcsi_inpainting.custom_predictor_corrector.CustomGuidedPredictorCorrector.from_pl_module',
-    'repaint-v1': 'dbcsi_inpainting.custom_predictor_corrector.CustomGuidedPredictorCorrectorRePaint.from_pl_module'
+    'repaint-v1': 'dbcsi_inpainting.custom_predictor_corrector.CustomGuidedPredictorCorrectorRePaint.from_pl_module',
+    'repaint-v2': 'dbcsi_inpainting.custom_predictor_corrector.CustomGuidedPredictorCorrectorRePaintV2.from_pl_module',
 }
 
 def run_sampling(
@@ -38,6 +39,8 @@ def run_sampling(
     ]
     if 'n_resample_steps' in params:
         sampling_config_overrides.append(f'+sampler_partial.n_resample_steps={params["n_resample_steps"]}')
+    if 'jump_length' in params:
+        sampling_config_overrides.append(f'+sampler_partial.jump_length={params["jump_length"]}')
     
     structures_wo_H_regenerated: List[Structure] = generate_reconstructed_structures(
         structures_to_reconstruct=structures_dl,

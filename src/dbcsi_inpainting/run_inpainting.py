@@ -26,6 +26,7 @@ if __name__ == '__main__':
         'coordinates_snr': [0.4],
         'n_corrector_steps': [1],
         # 'n_resample_steps': [3],
+        # 'jump_length': [1],
         'batch_size': 512,
         'N_samples_per_structure': 1,
     }
