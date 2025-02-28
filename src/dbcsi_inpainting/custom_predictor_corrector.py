@@ -118,7 +118,7 @@ class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
         dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(self._device)
         batch0 = batch.clone()
         
-        print('This is the batch0', batch0['pos'], batch0['atomic_numbers'])
+        print('This is the batch0', batch0['pos'], batch0['cell'], batch0['atomic_numbers'])
 
         for i in tqdm(range(self.N), miniters=50, mininterval=5):
             # Set the timestep
@@ -126,11 +126,13 @@ class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
             
             noisy_sample = self.diffusion_module.corruption.sample_marginal(batch0, t)
 
-            # # print('Before adding noise to host', batch['pos'], batch['atomic_numbers'])
+            # print('Before adding noise to host', batch['pos'], batch['cell'], batch['atomic_numbers'])
             
             batch['pos'] = batch['pos'].lerp_(noisy_sample['pos'], mask['pos'])
+            batch['cell'] = noisy_sample['cell']
             
-            # print('After adding noise to host', batch['pos'], batch['atomic_numbers'])
+            print('After adding noise to host', batch['pos'], batch['atomic_numbers'])
+            print('cell', batch['cell'])
             # print('This is the batch0', batch0['pos'], batch0['atomic_numbers'])
             
             # print('\n\n\n')

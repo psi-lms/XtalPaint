@@ -21,7 +21,8 @@ def run_sampling(
     predictor_corrector: str,
     structures_dl: DataLoader,
     params: Dict[str, Any],
-    results_path: Path
+    results_path: Path,
+    fix_cell: bool = True
 ) -> List[Structure]:
     """
     Run the structure reconstruction sampling using the given parameters.
@@ -31,12 +32,16 @@ def run_sampling(
     sampling_config_overrides = [
         f'sampler_partial.N={params["N_steps"]}',
         f'sampler_partial.n_steps_corrector={params["n_corrector_steps"]}',
-        f'~sampler_partial.predictor_partials.cell',
-        f'~sampler_partial.corrector_partials.cell',
         f'~sampler_partial.predictor_partials.atomic_numbers',
         f'sampler_partial.corrector_partials.pos.snr={params["coordinates_snr"]}',
         f'sampler_partial._target_={GUIDED_PREDICTOR_CORRECTOR_MAPPING[predictor_corrector]}',
     ]
+    if fix_cell:
+        sampling_config_overrides.extend([
+            f'~sampler_partial.predictor_partials.cell',
+            f'~sampler_partial.corrector_partials.cell',
+        ]
+        )
     if 'n_resample_steps' in params:
         sampling_config_overrides.append(f'+sampler_partial.n_resample_steps={params["n_resample_steps"]}')
     if 'jump_length' in params:
@@ -57,7 +62,8 @@ def run_experiment(
     predictor_corrector: str,
     structures_dl: DataLoader,
     structures_subset: List["Structure"],
-    params: Dict[str, Any]
+    params: Dict[str, Any],
+    relaxation_kwargs: Dict[str, Any] = None
 ) -> None:
     """
     Run a single experiment:
@@ -69,9 +75,12 @@ def run_experiment(
     results_path: Path = Path(param_str)
     results_path.mkdir(parents=True, exist_ok=True)
     
+    if relaxation_kwargs is None:
+        relaxation_kwargs = {}
+    
     with mlflow.start_run(run_name=param_str):
         structures_wo_H_regenerated = run_sampling(predictor_corrector, structures_dl, params, results_path)
-        relaxed = relax_structure(structures_wo_H_regenerated)
+        relaxed = relax_structure(structures_wo_H_regenerated, **relaxation_kwargs)
         relaxed_structures: List[Structure] = [r[0] for r in zip(*relaxed)]
         relaxed_dir: Path = results_path / 'structures_relaxed'
         if not os.path.exists(relaxed_dir):
@@ -88,6 +97,7 @@ def run_all_experiments(
     structures_dl: DataLoader,
     structures_subset: List[Structure],
     param_grid: Dict[str, Any],
+    relaxation_kwargs: Dict[str, Any] = None
 ) -> None:
     """Loop over parameter grid and run each experiment."""
     # Convert each parameter to a list if it isn't one already.
@@ -105,4 +115,4 @@ def run_all_experiments(
             if params['N_steps'] * params['n_corrector_steps'] * params['n_resample_steps'] > 5500:
                 continue
 
-        run_experiment(predictor_corrector, structures_dl, structures_subset, params)
+        run_experiment(predictor_corrector, structures_dl, structures_subset, params, relaxation_kwargs)

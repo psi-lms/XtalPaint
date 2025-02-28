@@ -36,7 +36,10 @@ def load_structures(formulas_to_choose: Iterable[str], N_structures: int) -> Lis
     subset: List[Structure] = [structures_w_H[i] for i in indices]
     print(f'Number of unique formulas: {len({s.composition.formula for s in subset})}')
     print(f'Number of structures: {len(subset)}')
-    save_structures(Path('./initial_structures/'), subset)
+
+    save_dir = Path('./initial_structures/')
+    save_dir.mkdir(parents=True, exist_ok=True)
+    save_structures(save_dir, subset)
     return subset
 
 def prepare_dataset(structures_subset: List[Structure]) -> CrystalDataset:
