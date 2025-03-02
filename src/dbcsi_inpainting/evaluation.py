@@ -15,14 +15,21 @@ def evaluate_results(
     """Evaluate regenerated structures against the originals."""
     matcher = StructureMatcher()
     results: List[Tuple[str, str, Any, Any]] = []
-    mapping: Dict[str, Structure] = {
-        f'{s.composition.alphabetical_formula} {s.volume:.0f}': s for s in structures_subset
-    }
+
+    assert [structures_regen[i].composition.iupac_formula == relaxed_structures[i].composition.iupac_formula for i in range(len(structures_regen))]
+    assert [structures_regen[i].composition.iupac_formula == structures_subset[i].composition.iupac_formula for i in range(len(structures_regen))]
+    
     for i in range(len(structures_regen)):
-        formula = structures_regen[i].composition.alphabetical_formula
-        volume = structures_regen[i].volume
-        ref_key = f'{formula} {volume:.0f}'
-        ref_struct = mapping[ref_key]
+        formula = structures_subset[i].composition.alphabetical_formula
+        volume = structures_subset[i].volume
+        ref_key = f'{i} - {formula} - {volume:.0f}'
+        strct_index = structures_regen[i].properties['structure_id']
+        
+        assert strct_index == i
+        
+        # ref_struct = mapping[ref_key]
+        ref_struct = structures_subset[i]
+        assert ref_struct.composition.iupac_formula == structures_regen[i].composition.iupac_formula
         matches = matcher.fit(structures_regen[i], ref_struct)
         matches_relaxed = matcher.fit(relaxed_structures[i], ref_struct)
         results.append((ref_key, structures_regen[i].composition.iupac_formula, matches, matches_relaxed))

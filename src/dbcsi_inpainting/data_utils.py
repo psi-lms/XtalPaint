@@ -14,7 +14,7 @@ from functools import partial
 from dbcsi_inpainting.utils import _collate_fn_w_mask
 from dbcsi_inpainting.utils import _add_n_sites_to_be_found
 
-def load_structures(formulas_to_choose: Iterable[str], N_structures: int) -> List[Structure]:
+def load_structures(formulas_to_choose: Iterable[str], N_structures: int, max_num_atoms: int = 30, save_prefix: str = '') -> List[Structure]:
     """Load and filter structures with hydrogen."""
     input_file = Path(
         "/data/user/reents_t/projects/mlip/git/diffusion-based-crystal-structure-inpainting/mc3d_structures_with_H.bz2"
@@ -24,11 +24,12 @@ def load_structures(formulas_to_choose: Iterable[str], N_structures: int) -> Lis
     structures_json = json.loads(decompressed_data.decode('utf-8'))
     structures_w_H: List[Structure] = [Structure.from_dict(s) for s in structures_json]
 
-    structures_w_H = [
-        s for s in structures_w_H if (
-            s.num_sites < 100 and s.composition.reduced_formula in formulas_to_choose
-        )
-    ]
+    if formulas_to_choose:
+        structures_w_H = [
+            s for s in structures_w_H if (
+                s.num_sites < max_num_atoms and s.composition.reduced_formula in formulas_to_choose
+            )
+        ]
     if N_structures == -1:
         indices = list(range(len(structures_w_H)))
     else:
@@ -37,7 +38,7 @@ def load_structures(formulas_to_choose: Iterable[str], N_structures: int) -> Lis
     print(f'Number of unique formulas: {len({s.composition.formula for s in subset})}')
     print(f'Number of structures: {len(subset)}')
 
-    save_dir = Path('./initial_structures/')
+    save_dir = Path(f'./{save_prefix}_initial_structures/')
     save_dir.mkdir(parents=True, exist_ok=True)
     save_structures(save_dir, subset)
     return subset
@@ -45,26 +46,28 @@ def load_structures(formulas_to_choose: Iterable[str], N_structures: int) -> Lis
 def prepare_dataset(structures_subset: List[Structure]) -> CrystalDataset:
     """Remove H, add missing sites and create a CrystalDataset."""
     structures_H_removed: List[Structure] = []
-    for s in structures_subset:
+    for i, s in enumerate(structures_subset):
         n_H: int = int(s.composition['H'])
         s_wo_H: Structure = s.copy()
         s_wo_H.remove_species('H')
         s_wo_H = _add_n_sites_to_be_found(s_wo_H, n_H, 'H')
-        s_wo_H.properties['material_id'] = s.composition.formula
+        s_wo_H.properties['material_id'] = i    # s.composition.formula
         structures_H_removed.append(s_wo_H)
 
-    structures_numpy = structures_to_numpy(structures_H_removed)
+    structures_numpy, properties = structures_to_numpy(structures_H_removed)
+    properties['structure_id'] = np.arange(len(structures_subset))
     dataset = CrystalDataset(
-        **structures_numpy[0],
+        **structures_numpy,
+        properties=properties,
         transforms=[symmetrize_lattice, set_chemical_system_string]
     )
     return dataset
 
-def create_dataloader(dataset: CrystalDataset, N_samples_per_structure: int, batch_size: int) -> DataLoader:
+def create_dataloader(dataset: CrystalDataset, N_samples_per_structure: int, batch_size: int, fix_cell: bool = True) -> DataLoader:
     """Create a dataloader that repeats each sample."""
     return DataLoader(
         dataset.repeat(N_samples_per_structure),
         batch_size=batch_size,
-        collate_fn=partial(_collate_fn_w_mask, collate_fn=collate),
+        collate_fn=partial(_collate_fn_w_mask, collate_fn=collate, fix_cell=fix_cell),
         shuffle=False,
     )

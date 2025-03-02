@@ -22,6 +22,9 @@ def relax_atoms(
     potential = Potential.from_checkpoint(
         device=device, load_path=load_path, load_training_state=False
     )
+    
+    print('potential device: ', device)
+    
     batch_relaxer = BatchRelaxer(
         potential=potential, 
         # filter="EXPCELLFILTER", 

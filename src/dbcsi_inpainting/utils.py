@@ -16,6 +16,7 @@ from mattergen.common.utils.globals import get_device
 def _collate_fn_w_mask(
     batch: Sequence[ChemGraph],
     collate_fn: Callable[[Sequence[ChemGraph]], BatchedData],
+    fix_cell: bool = True
 ) -> tuple[BatchedData, None]:
     """Collate a batch of ChemGraphs and add a mask for missing positions."""
     batch = collate_fn(batch)
@@ -24,11 +25,15 @@ def _collate_fn_w_mask(
     mask = torch.ones_like(batch.pos, dtype=torch.float)
     mask[nan_pos] = 0
     batch['pos'] = torch.nan_to_num(batch['pos'])
+    
+    mask_dict = {
+        'pos': mask
+    }
+    if fix_cell:
+        mask_dict['cell'] =  torch.ones_like(batch.cell, dtype=torch.float)
+    
 
-    return batch, {
-        'pos': mask, 
-        'cell': torch.ones_like(batch.cell, dtype=torch.float)
-        }
+    return batch, mask_dict
 
 
 def relax_structure(

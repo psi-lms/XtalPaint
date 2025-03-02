@@ -105,12 +105,15 @@ class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
     ) -> SampleAndMeanAndMaybeRecords:
         """Denoise from a prior sample to a t=eps_t sample."""
         recorded_samples = None
+        dummy_mask = {}
         if record:
             recorded_samples = []
         for k in self._predictors:
             mask.setdefault(k, None)
+            dummy_mask.setdefault(k, None)
         for k in self._correctors:
             mask.setdefault(k, None)
+            dummy_mask.setdefault(k, None)
         mean_batch = batch.clone()
 
         # Decreasing timesteps from T to eps_t
@@ -118,7 +121,9 @@ class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
         dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(self._device)
         batch0 = batch.clone()
         
-        print('This is the batch0', batch0['pos'], batch0['cell'], batch0['atomic_numbers'])
+        print('device of tensor: ', batch0['pos'].device)
+        
+        # print('This is the batch0', batch0['pos'], batch0['cell'], batch0['atomic_numbers'])
 
         for i in tqdm(range(self.N), miniters=50, mininterval=5):
             # Set the timestep
@@ -131,8 +136,8 @@ class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
             batch['pos'] = batch['pos'].lerp_(noisy_sample['pos'], mask['pos'])
             batch['cell'] = noisy_sample['cell']
             
-            print('After adding noise to host', batch['pos'], batch['atomic_numbers'])
-            print('cell', batch['cell'])
+            # print('After adding noise to host', batch['pos'], batch['atomic_numbers'])
+            # print('cell', batch['cell'])
             # print('This is the batch0', batch0['pos'], batch0['atomic_numbers'])
             
             # print('\n\n\n')
@@ -154,7 +159,7 @@ class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
                     if record:
                         recorded_samples.append(batch.clone().to("cpu"))
                     batch, mean_batch = _mask_replace(
-                        samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=mask
+                        samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=dummy_mask
                     )
 
             # Predictor updates
@@ -172,7 +177,7 @@ class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
             if record:
                 recorded_samples.append(batch.clone().to("cpu"))
             batch, mean_batch = _mask_replace(
-                samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=mask
+                samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=dummy_mask
             )
 
         return batch, mean_batch, recorded_samples
@@ -338,7 +343,7 @@ class CustomGuidedPredictorCorrectorRePaint(GuidedPredictorCorrector):
                     batch['pos'] = batch['pos'].lerp_(noisy_sample['pos'], mask['pos'])
                 
                 if i_res < self.n_resample_steps - 1 and i < self.N - 1:
-                    print('Resampling')
+                    # print('Resampling')
                     # t_prev = torch.full((batch.get_batch_size(),), timesteps[i+1], device=self._device)
                     # if i == self.N -1:
                     #     t_prev2 = t_prev
@@ -453,7 +458,7 @@ class CustomGuidedPredictorCorrectorRePaintV2(GuidedPredictorCorrector):
                 if record:
                     recorded_samples.append(batch.clone().to("cpu"))
 
-                # TR: I set mask to None, so that the predictor steps are alos passed to the corrector
+                # TR: I set mask to None, so that the predictor steps are also passed to the corrector
                 batch, mean_batch = _mask_replace(
                     samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=ignore_mask
                 )

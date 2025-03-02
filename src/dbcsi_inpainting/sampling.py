@@ -12,6 +12,7 @@ from dbcsi_inpainting.evaluation import evaluate_results  # Assuming you created
 
 GUIDED_PREDICTOR_CORRECTOR_MAPPING: Dict[str, str] = {
     'baseline': 'mattergen.diffusion.sampling.classifier_free_guidance.GuidedPredictorCorrector.from_pl_module',
+    'baseline-reverted-order': 'dbcsi_inpainting.custom_predictor_corrector.GuidedPredictorCorrectorRevertedOrder.from_pl_module',
     'baseline-with-noise': 'dbcsi_inpainting.custom_predictor_corrector.CustomGuidedPredictorCorrector.from_pl_module',
     'repaint-v1': 'dbcsi_inpainting.custom_predictor_corrector.CustomGuidedPredictorCorrectorRePaint.from_pl_module',
     'repaint-v2': 'dbcsi_inpainting.custom_predictor_corrector.CustomGuidedPredictorCorrectorRePaintV2.from_pl_module',
@@ -36,12 +37,20 @@ def run_sampling(
         f'sampler_partial.corrector_partials.pos.snr={params["coordinates_snr"]}',
         f'sampler_partial._target_={GUIDED_PREDICTOR_CORRECTOR_MAPPING[predictor_corrector]}',
     ]
+    config_overrides = [
+        'lightning_module.diffusion_module.corruption.discrete_corruptions.atomic_numbers.d3pm.schedule.num_steps=' + str(params["N_steps"]),
+    ]
+    
     if fix_cell:
         sampling_config_overrides.extend([
             f'~sampler_partial.predictor_partials.cell',
             f'~sampler_partial.corrector_partials.cell',
         ]
         )
+        config_overrides.append(
+            '~lightning_module.diffusion_module.corruption.sdes.cell'
+        )
+    
     if 'n_resample_steps' in params:
         sampling_config_overrides.append(f'+sampler_partial.n_resample_steps={params["n_resample_steps"]}')
     if 'jump_length' in params:
@@ -51,10 +60,7 @@ def run_sampling(
         structures_to_reconstruct=structures_dl,
         output_path=results_path,
         sampling_config_overrides=sampling_config_overrides,
-        config_overrides=[
-            'lightning_module.diffusion_module.corruption.discrete_corruptions.atomic_numbers.d3pm.schedule.num_steps=' + str(params["N_steps"]),
-            '~lightning_module.diffusion_module.corruption.sdes.cell'
-        ]
+        config_overrides=config_overrides
     )
     return structures_wo_H_regenerated
 
@@ -63,7 +69,9 @@ def run_experiment(
     structures_dl: DataLoader,
     structures_subset: List["Structure"],
     params: Dict[str, Any],
-    relaxation_kwargs: Dict[str, Any] = None
+    fix_cell: bool=True,
+    relaxation_kwargs: Dict[str, Any] = None,
+    save_prefix: str = ''
 ) -> None:
     """
     Run a single experiment:
@@ -71,15 +79,15 @@ def run_experiment(
       - Run sampling, perform optional relaxation.
       - Evaluate the regenerated structures.
     """
-    param_str: str = '__'.join([f"{key}-{value}" for key, value in params.items()])
+    param_str: str = f'{save_prefix}_' + '__'.join([f"{key}-{value}" for key, value in params.items()]) + f'__{predictor_corrector}'
     results_path: Path = Path(param_str)
     results_path.mkdir(parents=True, exist_ok=True)
-    
+
     if relaxation_kwargs is None:
         relaxation_kwargs = {}
-    
+
     with mlflow.start_run(run_name=param_str):
-        structures_wo_H_regenerated = run_sampling(predictor_corrector, structures_dl, params, results_path)
+        structures_wo_H_regenerated = run_sampling(predictor_corrector, structures_dl, params, results_path, fix_cell)
         relaxed = relax_structure(structures_wo_H_regenerated, **relaxation_kwargs)
         relaxed_structures: List[Structure] = [r[0] for r in zip(*relaxed)]
         relaxed_dir: Path = results_path / 'structures_relaxed'
@@ -97,7 +105,9 @@ def run_all_experiments(
     structures_dl: DataLoader,
     structures_subset: List[Structure],
     param_grid: Dict[str, Any],
-    relaxation_kwargs: Dict[str, Any] = None
+    fix_cell: bool = True,
+    relaxation_kwargs: Dict[str, Any] = None,
+    save_prefix: str = '',
 ) -> None:
     """Loop over parameter grid and run each experiment."""
     # Convert each parameter to a list if it isn't one already.
@@ -111,8 +121,8 @@ def run_all_experiments(
         params = dict(zip(grid_params.keys(), combo))
         
         # Example constraint: if the parameters exist then skip over combinations violating the constraint.
-        if all(key in params for key in ['N_steps', 'n_corrector_steps', 'n_resample_steps']):
-            if params['N_steps'] * params['n_corrector_steps'] * params['n_resample_steps'] > 5500:
-                continue
+        # if all(key in params for key in ['N_steps', 'n_corrector_steps', 'n_resample_steps']):
+            # if params['N_steps'] * params['n_corrector_steps'] * params['n_resample_steps'] > 5500:
+            #     continue
 
-        run_experiment(predictor_corrector, structures_dl, structures_subset, params, relaxation_kwargs)
+        run_experiment(predictor_corrector, structures_dl, structures_subset, params, fix_cell, relaxation_kwargs, save_prefix)

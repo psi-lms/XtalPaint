@@ -1,4 +1,5 @@
 from torch.utils.data import DataLoader
+import torch
 from pymatgen.core.structure import Structure
 from typing import Literal
 from pathlib import Path
@@ -21,6 +22,16 @@ class CrystalGeneratorInpainting(CrystalGenerator):
     def __init__(self, dataloader: DataLoader, *args, **kwargs):
         self.dataloader = dataloader
         super().__init__(*args, **kwargs)
+        
+    def check_distributed(self, sampler):
+        n_cuda_devices = torch.cuda.device_count()
+        if n_cuda_devices:
+            print(f'Found {n_cuda_devices} cuda devices')
+            model = sampler.diffusion_module.model
+            model = torch.nn.DataParallel(model)
+            model.to(torch.device("cuda:0"))
+            sampler.diffusion_module.model = model 
+            
     
     def get_condition_loader(self, *args, **kwargs):
         return self.dataloader
@@ -55,6 +66,8 @@ class CrystalGeneratorInpainting(CrystalGenerator):
 
         sampler_partial = instantiate(sampling_config.sampler_partial)
         sampler = sampler_partial(pl_module=self.model)
+        
+        # self.check_distributed(sampler=sampler)
         
         sampler.diffusion_module.model.denoise_atom_types = False
         sampler._multi_corruption.corruptions.pop('atomic_numbers', None)
