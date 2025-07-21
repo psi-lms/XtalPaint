@@ -1,56 +1,71 @@
 """Configuration schema validation for DBCSI inpainting experiments."""
 
-from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 import yaml
 from pathlib import Path
+from pydantic import BaseModel, Field, field_validator, model_validator, ValidationError
 
 
-@dataclass
-class ParamGridConfig:
+class ParamGridConfig(BaseModel):
     """Configuration for parameter grid in experiments."""
-    N_structures: int
-    N_steps: int
-    coordinates_snr: List[float]
-    n_corrector_steps: List[int]
-    batch_size: int
-    N_samples_per_structure: int
-    n_resample_steps: Optional[List[int]] = None
-    jump_length: Optional[List[int]] = None
+    N_structures: int = Field(..., description="Number of structures to process")
+    N_steps: int = Field(..., gt=0, description="Number of steps")
+    coordinates_snr: List[float] = Field(..., description="Coordinates signal-to-noise ratio values")
+    n_corrector_steps: List[int] = Field(..., description="Number of corrector steps")
+    batch_size: int = Field(..., gt=0, description="Batch size")
+    N_samples_per_structure: int = Field(..., gt=0, description="Number of samples per structure")
+    n_resample_steps: Optional[List[int]] = Field(None, description="Number of resample steps")
+    jump_length: Optional[List[int]] = Field(None, description="Jump length values")
+
+    @field_validator('N_structures')
+    @classmethod
+    def validate_n_structures(cls, v):
+        if v < -1 or v == 0:
+            raise ValueError("N_structures must be positive or -1 for all structures")
+        return v
+
+    @field_validator('coordinates_snr')
+    @classmethod
+    def validate_coordinates_snr(cls, v):
+        for snr in v:
+            if not 0 < snr <= 1:
+                raise ValueError(f"coordinates_snr values must be between 0 and 1, got {snr}")
+        return v
+
+    @field_validator('n_corrector_steps')
+    @classmethod
+    def validate_n_corrector_steps(cls, v):
+        for steps in v:
+            if steps <= 0:
+                raise ValueError(f"n_corrector_steps values must be positive, got {steps}")
+        return v
 
 
-@dataclass
-class RelaxKwargsConfig:
+class RelaxKwargsConfig(BaseModel):
     """Configuration for relaxation parameters."""
-    load_path: str
-    fmax: float
+    load_path: str = Field(..., min_length=1, description="Load path for relaxation")
+    fmax: float = Field(..., gt=0, description="Maximum force threshold")
 
 
-@dataclass
-class InpaintingConfig:
+class InpaintingConfig(BaseModel):
     """Main configuration schema for DBCSI inpainting experiments."""
-    name: str
-    fix_cell: bool
-    max_num_atoms: int
-    predictor_corrector: str
-    param_grid: ParamGridConfig
-    relax_kwargs: RelaxKwargsConfig
-    save_prefix: str
+    name: str = Field(..., min_length=1, description="Experiment name")
+    fix_cell: bool = Field(..., description="Whether to fix cell parameters")
+    max_num_atoms: int = Field(..., gt=0, description="Maximum number of atoms")
+    predictor_corrector: str = Field(..., min_length=1, description="Predictor-corrector method")
+    param_grid: ParamGridConfig = Field(..., description="Parameter grid configuration")
+    relax_kwargs: RelaxKwargsConfig = Field(..., description="Relaxation parameters")
+    save_prefix: str = Field(..., min_length=1, description="Save prefix for outputs")
     
     # Model specification - exactly one must be provided
-    pretrained_name: Optional[str] = None
-    model_path: Optional[str] = None
+    pretrained_name: Optional[str] = Field(None, description="Name of pretrained model")
+    model_path: Optional[str] = Field(None, description="Path to custom model")
     
     # Optional parameters
-    mattergen_path: Optional[str] = None
+    mattergen_path: Optional[str] = Field(None, description="Path to MatterGen model")
 
-    def __post_init__(self):
-        """Validate the configuration after initialization."""
-        self._validate_model_specification()
-        self._validate_types()
-        self._validate_values()
-
-    def _validate_model_specification(self):
+    @model_validator(mode='after')
+    def validate_model_specification(self):
         """Ensure exactly one of pretrained_name or model_path is specified."""
         model_specs = [self.pretrained_name, self.model_path]
         non_none_specs = [spec for spec in model_specs if spec is not None]
@@ -59,50 +74,8 @@ class InpaintingConfig:
             raise ValueError("Either 'pretrained_name' or 'model_path' must be specified")
         elif len(non_none_specs) > 1:
             raise ValueError("Only one of 'pretrained_name' or 'model_path' can be specified, not both")
-
-    def _validate_types(self):
-        """Validate that all fields have the correct types."""
-        # Type validation is mostly handled by dataclass type hints
-        # Additional custom validation can be added here
-        if not isinstance(self.name, str) or not self.name.strip():
-            raise ValueError("'name' must be a non-empty string")
         
-        if not isinstance(self.save_prefix, str) or not self.save_prefix.strip():
-            raise ValueError("'save_prefix' must be a non-empty string")
-        
-        if not isinstance(self.predictor_corrector, str) or not self.predictor_corrector.strip():
-            raise ValueError("'predictor_corrector' must be a non-empty string")
-
-    def _validate_values(self):
-        """Validate that values are within reasonable ranges."""
-        if self.max_num_atoms <= 0:
-            raise ValueError("'max_num_atoms' must be positive")
-        
-        if self.param_grid.N_structures < -1 or self.param_grid.N_structures == 0:
-            raise ValueError("'N_structures' must be positive or -1 for all structures")
-        
-        if self.param_grid.N_steps <= 0:
-            raise ValueError("'N_steps' must be positive")
-        
-        if self.param_grid.batch_size <= 0:
-            raise ValueError("'batch_size' must be positive")
-        
-        if self.param_grid.N_samples_per_structure <= 0:
-            raise ValueError("'N_samples_per_structure' must be positive")
-        
-        # Validate coordinates_snr values
-        for snr in self.param_grid.coordinates_snr:
-            if not 0 < snr <= 1:
-                raise ValueError(f"coordinates_snr values must be between 0 and 1, got {snr}")
-        
-        # Validate n_corrector_steps values
-        for steps in self.param_grid.n_corrector_steps:
-            if steps <= 0:
-                raise ValueError(f"n_corrector_steps values must be positive, got {steps}")
-        
-        # Validate relax_kwargs
-        if self.relax_kwargs.fmax <= 0:
-            raise ValueError("relax_kwargs.fmax must be positive")
+        return self
 
 
 class ConfigValidator:
@@ -149,20 +122,13 @@ class ConfigValidator:
         Returns:
             Validated InpaintingConfig object
         """
-        # Extract param_grid
-        param_grid_dict = config_dict.get('param_grid', {})
-        param_grid = ParamGridConfig(**param_grid_dict)
-        
-        # Extract relax_kwargs
-        relax_kwargs_dict = config_dict.get('relax_kwargs', {})
-        relax_kwargs = RelaxKwargsConfig(**relax_kwargs_dict)
-        
-        # Create main config
-        config_dict_copy = config_dict.copy()
-        config_dict_copy['param_grid'] = param_grid
-        config_dict_copy['relax_kwargs'] = relax_kwargs
-        
-        return InpaintingConfig(**config_dict_copy)
+        # With pydantic, we can create the model directly from the dict
+        # and it will handle nested model creation automatically
+        try:
+            return InpaintingConfig(**config_dict)
+        except ValidationError as e:
+            # Convert pydantic ValidationError to ValueError for consistent API
+            raise ValueError(str(e))
     
     @staticmethod
     def validate_config_dict(config_dict: Dict[str, Any]) -> InpaintingConfig:

@@ -10,7 +10,7 @@ authors = [{ name = "Timo Reents", email = "timo.reents@psi.ch" }]
 license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = []
+dependencies = ["pydantic>=2.0"]
 
 
 [tool.setuptools]
