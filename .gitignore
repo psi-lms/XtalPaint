@@ -172,4 +172,4 @@ cython_debug/
 
 *.zip
 *.txt
-*extxyz
+*extxyz=2.0
