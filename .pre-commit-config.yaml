@@ -1,0 +1,63 @@
+# Pre-commit configuration for diffusion-based-crystal-structure-inpainting
+# 
+# To use this configuration:
+# 1. Install pre-commit: pip install pre-commit
+# 2. Install formatting tools: pip install black isort flake8 pydocstyle
+# 3. Install hooks: pre-commit install
+# 4. Run on all files: pre-commit run --all-files
+#
+# Note: If network issues prevent installing tools via pre-commit, 
+# install them locally first: pip install black isort flake8 pydocstyle
+
+repos:
+  # Pre-commit hooks for basic checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  # Black - code formatting  
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        entry: black
+        language: system
+        types: [python]
+        args: [--check, --diff]
+
+  # isort - import sorting
+  - repo: local  
+    hooks:
+      - id: isort
+        name: isort
+        entry: isort
+        language: system
+        types: [python]
+        args: [--profile, black, --check-only, --diff]
+
+  # flake8 - linting
+  - repo: local
+    hooks:
+      - id: flake8
+        name: flake8
+        entry: flake8
+        language: system
+        types: [python]
+        args: [--max-line-length=88, --extend-ignore=E203,W503]
+
+  # pydocstyle - docstring style checking
+  - repo: local
+    hooks:
+      - id: pydocstyle
+        name: pydocstyle
+        entry: pydocstyle
+        language: system
+        types: [python]
+        args: [--convention=numpy]

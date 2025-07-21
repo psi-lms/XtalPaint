@@ -12,7 +12,54 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []
 
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "black",
+    "isort",
+    "flake8",
+    "pydocstyle",
+]
+
 
 [tool.setuptools]
 packages = ["dbcsi_inpainting"]
 package-dir = {"" = "src"}
+
+# Black configuration
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["dbcsi_inpainting"]
+known_third_party = ["numpy", "torch", "pymatgen", "mattergen"]
+
+# pydocstyle configuration
+[tool.pydocstyle]
+convention = "numpy"
+inherit = false
+ignore = [
+    "D100",  # Missing docstring in public module
+    "D104",  # Missing docstring in public package
+    "D105",  # Missing docstring in magic method
+    "D107",  # Missing docstring in __init__
+]
