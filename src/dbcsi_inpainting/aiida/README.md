@@ -12,23 +12,27 @@ This module provides configuration schema validation for diffusion-based crystal
 
 ## Usage
 
-### Basic Usage
+### Basic Validation
 
 ```python
-from dbcsi_inpainting.aiida import ConfigValidator, InpaintingProcess
+from dbcsi_inpainting.aiida import ConfigValidator
+from dbcsi_inpainting.aiida.inpainting_process import validate_config_file, validate_config_dict
 
 # Load and validate configuration from YAML file
 config = ConfigValidator.load_config('config.yaml')
 
-# Create and run inpainting process
-process = InpaintingProcess('config.yaml')
-result = process.run_experiment()
+# Validate a configuration dictionary
+config_dict = {...}  # your config as dict
+config = validate_config_dict(config_dict)
+
+# Simple validation function
+config = validate_config_file('config.yaml')
 ```
 
-### Command Line Usage
+### Command Line Validation
 
 ```bash
-# Validate and run experiment from config file
+# Validate a configuration file
 python -m dbcsi_inpainting.aiida.inpainting_process config.yaml
 
 # Or from the aiida directory
@@ -151,20 +155,9 @@ relax_kwargs:
 - `load_config(config_path)`: Load and validate configuration from YAML file
 - `validate_config_dict(config_dict)`: Validate configuration from dictionary
 
-### InpaintingProcess
-
-#### Methods
-- `__init__(config_path)`: Initialize with configuration file
-- `get_experiment_parameters()`: Extract parameters for experiment
-- `get_relax_kwargs()`: Extract relaxation parameters
-- `run_experiment()`: Run the inpainting experiment (simulation)
-
-#### Class Methods
-- `from_config_dict(config_dict)`: Create instance from configuration dictionary
-
-### Standalone Functions
-- `run_experiment_from_config(config_path)`: Run experiment from config file
-- `validate_config_file(config_path)`: Validate config file without running
+### Standalone Validation Functions
+- `validate_config_file(config_path)`: Load and validate configuration from YAML file
+- `validate_config_dict(config_dict)`: Validate configuration from dictionary
 
 ## Error Handling
 
