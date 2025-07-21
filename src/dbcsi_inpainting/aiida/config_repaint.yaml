@@ -1,0 +1,18 @@
+name: "repaint-experiment"
+fix_cell: false
+max_num_atoms: 50
+predictor_corrector: "repaint-v2"
+param_grid:
+  N_structures: 250
+  N_steps: 100
+  coordinates_snr: [0.3]
+  n_corrector_steps: [3]
+  n_resample_steps: [3]
+  jump_length: [10]
+  batch_size: 512
+  N_samples_per_structure: 1
+relax_kwargs:
+  load_path: "MatterSim-v1.0.0-5M.pth"
+  fmax: 0.005
+model_path: "/custom/path/to/repaint/model"
+save_prefix: "repaint-v2-exp"

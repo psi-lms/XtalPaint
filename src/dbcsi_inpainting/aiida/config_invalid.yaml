@@ -1,0 +1,22 @@
+# This configuration file intentionally contains errors for testing
+
+name: ""  # Invalid: empty name
+fix_cell: true
+max_num_atoms: -10  # Invalid: negative value
+predictor_corrector: "test"
+
+# Invalid: both model specifications provided
+pretrained_name: "test_model"
+model_path: "/path/to/model"
+
+save_prefix: "invalid-test"
+param_grid:
+  N_structures: 10
+  N_steps: 50
+  coordinates_snr: [1.5]  # Invalid: > 1
+  n_corrector_steps: [0]  # Invalid: not positive
+  batch_size: 100
+  N_samples_per_structure: 1
+relax_kwargs:
+  load_path: "test.pth"
+  fmax: -0.01  # Invalid: negative

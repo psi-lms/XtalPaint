@@ -1,0 +1,17 @@
+name: "baseline-experiment"
+mattergen_path: "/path/to/mattergen/"
+fix_cell: true
+max_num_atoms: 30
+predictor_corrector: "baseline"
+param_grid:
+  N_structures: 100
+  N_steps: 200
+  coordinates_snr: [0.2, 0.4]
+  n_corrector_steps: [1, 5]
+  batch_size: 256
+  N_samples_per_structure: 5
+relax_kwargs:
+  load_path: "MatterSim-v1.0.0-5M.pth"
+  fmax: 0.01
+pretrained_name: "mattergen_base"
+save_prefix: "baseline-exp"
