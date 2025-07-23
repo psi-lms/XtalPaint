@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dbcsi-inpainting"
+version = "0.1.0"
+description = "Diffusion based crystal structure inpainting"
+authors = [{ name = "Timo Reents", email = "timo.reents@psi.ch" }]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [] 
+
+# To-Do: add dependencies as needed
+
+
+[tool.setuptools]
+packages = ["dbcsi_inpainting"]
+package-dir = {"" = "src"}
