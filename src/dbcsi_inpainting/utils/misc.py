@@ -1,22 +1,21 @@
-import numpy as np
-from typing import Callable, Sequence
-from pymatgen.core import Structure, Composition
-import torch
 import json
+from typing import Callable, Sequence
 
-
-from mattergen.diffusion.data.batched_data import BatchedData
-# from mattergen.evaluation.utils.relaxation import relax_structures
-from dbcsi_inpainting.utils.relaxation_utils import relax_structures
-from mattergen.common.utils.globals import get_device
+import numpy as np
+import torch
 from mattergen.common.data.chemgraph import ChemGraph
 from mattergen.common.utils.globals import get_device
+from mattergen.diffusion.data.batched_data import BatchedData
+from pymatgen.core import Structure
+
+# from mattergen.evaluation.utils.relaxation import relax_structures
+from dbcsi_inpainting.utils.relaxation_utils import relax_structures
 
 
 def _collate_fn_w_mask(
     batch: Sequence[ChemGraph],
     collate_fn: Callable[[Sequence[ChemGraph]], BatchedData],
-    fix_cell: bool = True
+    fix_cell: bool = True,
 ) -> tuple[BatchedData, None]:
     """Collate a batch of ChemGraphs and add a mask for missing positions."""
     batch = collate_fn(batch)
@@ -24,14 +23,11 @@ def _collate_fn_w_mask(
 
     mask = torch.ones_like(batch.pos, dtype=torch.float)
     mask[nan_pos] = 0
-    batch['pos'] = torch.nan_to_num(batch['pos'])
-    
-    mask_dict = {
-        'pos': mask
-    }
+    batch["pos"] = torch.nan_to_num(batch["pos"])
+
+    mask_dict = {"pos": mask}
     if fix_cell:
-        mask_dict['cell'] =  torch.ones_like(batch.cell, dtype=torch.float)
-    
+        mask_dict["cell"] = torch.ones_like(batch.cell, dtype=torch.float)
 
     return batch, mask_dict
 
@@ -40,7 +36,7 @@ def relax_structure(
     structures: Structure,
     device: str = str(get_device()),
     load_path: str | None = None,
-    **kwargs
+    **kwargs,
 ) -> tuple[Structure, float]:
     """
     Relax a single pymatgen Structure using mattersim and return the relaxed
@@ -69,27 +65,33 @@ def _add_n_sites_to_be_found(structure, n_sites, element):
         structure.append(element, np.full(3, fill_value=np.nan))
     return structure
 
+
 def load_mc3d_with_H():
-    from aiida import orm, load_profile
+    from aiida import load_profile, orm
 
     load_profile()
 
-    query_structures_w_H = orm.QueryBuilder().append(
-        orm.Group, filters={'label': 'mc3d-structures-with-H'}, tag='group'
-    ).append(
-        orm.StructureData, with_group='group'
+    query_structures_w_H = (
+        orm.QueryBuilder()
+        .append(
+            orm.Group, filters={"label": "mc3d-structures-with-H"}, tag="group"
+        )
+        .append(orm.StructureData, with_group="group")
     )
-    
+
     return query_structures_w_H.all(flat=True)
+
 
 def get_mattergen_unknown_formulas(path):
     """Get the formulas that are not in the training or validation set of MatterGen."""
-    with open(f'{path}/formula_not_in_train.json', 'r') as f:
+    with open(f"{path}/formula_not_in_train.json", "r") as f:
         formula_not_in_train = json.load(f)
 
-    with open(f'{path}/formula_not_in_val.json', 'r') as f:
+    with open(f"{path}/formula_not_in_val.json", "r") as f:
         formula_not_in_val = json.load(f)
 
-    formulas_to_choose = set(formula_not_in_train).union(set(formula_not_in_val))
-    
+    formulas_to_choose = set(formula_not_in_train).union(
+        set(formula_not_in_val)
+    )
+
     return formulas_to_choose

@@ -60,4 +60,4 @@ repos:
         entry: pydocstyle
         language: system
         types: [python]
-        args: [--convention=google]
+        args: []

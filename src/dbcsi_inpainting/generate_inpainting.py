@@ -1,38 +1,37 @@
-from torch.utils.data import DataLoader
-import torch
-from pymatgen.core.structure import Structure
-from typing import Literal
+import os
 from pathlib import Path
+from typing import Literal
+
+import torch
 from hydra.utils import instantiate
+from mattergen.common.data.types import TargetProperty
+from mattergen.common.utils.data_classes import (
+    PRETRAINED_MODEL_NAME,
+    MatterGenCheckpointInfo,
+)
+from mattergen.generator import CrystalGenerator, draw_samples_from_sampler
 from omegaconf import OmegaConf
 from pymatgen.core import Structure
-import os
-
-from mattergen.common.data.num_atoms_distribution import NUM_ATOMS_DISTRIBUTIONS
-from mattergen.common.data.types import TargetProperty
-from mattergen.common.data.types import TargetProperty
-from mattergen.common.utils.data_classes import MatterGenCheckpointInfo, PRETRAINED_MODEL_NAME
-from mattergen.generator import CrystalGenerator, draw_samples_from_sampler
+from torch.utils.data import DataLoader
 
 
 class CrystalGeneratorInpainting(CrystalGenerator):
-    
+
     dataloader: DataLoader
-    
+
     def __init__(self, dataloader: DataLoader, *args, **kwargs):
         self.dataloader = dataloader
         super().__init__(*args, **kwargs)
-        
+
     def check_distributed(self, sampler):
         n_cuda_devices = torch.cuda.device_count()
         if n_cuda_devices:
-            print(f'Found {n_cuda_devices} cuda devices')
+            print(f"Found {n_cuda_devices} cuda devices")
             model = sampler.diffusion_module.model
             model = torch.nn.DataParallel(model)
             model.to(torch.device("cuda:0"))
-            sampler.diffusion_module.model = model 
-            
-    
+            sampler.diffusion_module.model = model
+
     def get_condition_loader(self, *args, **kwargs):
         return self.dataloader
 
@@ -46,7 +45,9 @@ class CrystalGeneratorInpainting(CrystalGenerator):
         # Prioritize the runtime provided batch_size, num_batches and target_compositions_dict
         batch_size = batch_size or self.batch_size
         num_batches = num_batches or self.num_batches
-        target_compositions_dict = target_compositions_dict or self.target_compositions_dict
+        target_compositions_dict = (
+            target_compositions_dict or self.target_compositions_dict
+        )
         assert batch_size is not None
         assert num_batches is not None
 
@@ -62,15 +63,17 @@ class CrystalGeneratorInpainting(CrystalGenerator):
 
         print("\nSampling config:")
         print(OmegaConf.to_yaml(sampling_config, resolve=True))
-        condition_loader = self.get_condition_loader(sampling_config, target_compositions_dict)
+        condition_loader = self.get_condition_loader(
+            sampling_config, target_compositions_dict
+        )
 
         sampler_partial = instantiate(sampling_config.sampler_partial)
         sampler = sampler_partial(pl_module=self.model)
-        
+
         # self.check_distributed(sampler=sampler)
-        
+
         sampler.diffusion_module.model.denoise_atom_types = False
-        sampler._multi_corruption.corruptions.pop('atomic_numbers', None)
+        sampler._multi_corruption.corruptions.pop("atomic_numbers", None)
 
         print(sampler.diffusion_module.corruption.corruptions)
 
@@ -89,11 +92,12 @@ class CrystalGeneratorInpainting(CrystalGenerator):
 
         return generated_structures
 
+
 def generate_reconstructed_structures(
     structures_to_reconstruct: DataLoader,
-    pretrained_name: PRETRAINED_MODEL_NAME | None = 'mattergen_base',
+    pretrained_name: PRETRAINED_MODEL_NAME | None = "mattergen_base",
     output_path: str = None,
-    model_path: str = None,     # '/data/user/reents_t/projects/mlip/git/mattergen/checkpoints/mattergen_base',
+    model_path: str = None,  # '/data/user/reents_t/projects/mlip/git/mattergen/checkpoints/mattergen_base',
     batch_size: int = 10,
     num_batches: int = 1,
     config_overrides: list[str] | None = None,
@@ -145,7 +149,11 @@ def generate_reconstructed_structures(
             config_overrides=config_overrides,
             strict_checkpoint_loading=strict_checkpoint_loading,
         )
-    _sampling_config_path = Path(sampling_config_path) if sampling_config_path is not None else None
+    _sampling_config_path = (
+        Path(sampling_config_path)
+        if sampling_config_path is not None
+        else None
+    )
 
     generator = CrystalGeneratorInpainting(
         dataloader=structures_to_reconstruct,
@@ -158,9 +166,11 @@ def generate_reconstructed_structures(
         sampling_config_overrides=sampling_config_overrides,
         record_trajectories=record_trajectories,
         diffusion_guidance_factor=(
-            diffusion_guidance_factor if diffusion_guidance_factor is not None else 0.0
+            diffusion_guidance_factor
+            if diffusion_guidance_factor is not None
+            else 0.0
         ),
         target_compositions_dict=target_compositions,
     )
-    
+
     return generator.generate(output_dir=Path(output_path))
