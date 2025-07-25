@@ -5,34 +5,115 @@ from typing import Literal
 from pathlib import Path
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
-from pymatgen.core import Structure
-import os
+from pymatgen.core.trajectory import Trajectory
 
-from mattergen.common.data.num_atoms_distribution import NUM_ATOMS_DISTRIBUTIONS
+
 from mattergen.common.data.types import TargetProperty
 from mattergen.common.data.types import TargetProperty
-from mattergen.common.utils.data_classes import MatterGenCheckpointInfo, PRETRAINED_MODEL_NAME
-from mattergen.generator import CrystalGenerator, draw_samples_from_sampler
+from mattergen.common.utils.data_classes import (
+    MatterGenCheckpointInfo,
+    PRETRAINED_MODEL_NAME,
+)
+from mattergen.generator import (
+    CrystalGenerator,
+    list_of_time_steps_to_list_of_trajectories,
+    structure_from_model_output,
+    structures_from_trajectory,
+)
+
+from pathlib import Path
+
+import torch
+from hydra.utils import instantiate
+from omegaconf import DictConfig, OmegaConf
+from pymatgen.core.structure import Structure
+from tqdm import tqdm
+
+from mattergen.common.data.chemgraph import ChemGraph
+from mattergen.common.data.collate import collate
+from mattergen.common.data.condition_factory import ConditionLoader
+
+from mattergen.common.data.types import TargetProperty
+from mattergen.common.utils.data_utils import lattice_matrix_to_params_torch
+from mattergen.common.utils.eval_utils import (
+    MatterGenCheckpointInfo,
+    save_structures,
+)
+
+from mattergen.diffusion.sampling.pc_sampler import PredictorCorrector
 
 
-class CrystalGeneratorInpainting(CrystalGenerator):
-    
+def draw_samples_from_sampler(
+    sampler: PredictorCorrector,
+    condition_loader: ConditionLoader,
+    properties_to_condition_on: TargetProperty | None = None,
+    record_trajectories: bool = True,
+    fix_cell: bool = True,
+) -> list[Structure]:
+
+    # Dict
+    properties_to_condition_on = properties_to_condition_on or {}
+
+    # we cannot conditional sample on something on which the model was not trained to condition on
+    assert all([key in sampler.diffusion_module.model.cond_fields_model_was_trained_on for key in properties_to_condition_on.keys()])  # type: ignore
+
+    all_samples_list = []
+    all_trajs_list = []
+    for conditioning_data, mask in tqdm(
+        condition_loader, desc="Generating samples"
+    ):
+
+        # generate samples
+        if record_trajectories:
+            # sample, mean, intermediate_samples = sampler.sample_with_record(conditioning_data, mask)
+            # sample, mean, intermediate_samples, intermediate_means = sampler.sample_with_record(conditioning_data, mask)
+            _out = sampler.sample_with_record(conditioning_data, mask)
+            if len(_out) == 4:
+                sample, mean, intermediate_samples, intermediate_means = _out
+            elif len(_out) == 3:
+                sample, mean, intermediate_samples = _out
+            all_trajs_list.extend(
+                list_of_time_steps_to_list_of_trajectories(
+                    intermediate_samples
+                )
+            )
+        else:
+            sample, mean = sampler.sample(conditioning_data, mask)
+        all_samples_list.extend(mean.to_data_list())
+    all_samples = collate(all_samples_list)
+    assert isinstance(all_samples, ChemGraph)
+    lengths, angles = lattice_matrix_to_params_torch(all_samples.cell)
+    all_samples = all_samples.replace(lengths=lengths, angles=angles)
+
+    generated_strucs = structure_from_model_output(
+        all_samples["pos"].reshape(-1, 3),
+        all_samples["atomic_numbers"].reshape(-1),
+        all_samples["lengths"].reshape(-1, 3),
+        all_samples["angles"].reshape(-1, 3),
+        all_samples["num_atoms"].reshape(-1),
+    )
+
+    trajectories = []
+    for ix, traj in enumerate(all_trajs_list):
+        strucs = structures_from_trajectory(traj)
+        trajectories.append(
+            Trajectory.from_structures(
+                strucs,
+                constant_lattice=fix_cell,
+            )
+        )
+
+    return generated_strucs, trajectories
+
+
+class CrystalInpaintingGenerator(CrystalGenerator):
+
     dataloader: DataLoader
-    
+
     def __init__(self, dataloader: DataLoader, *args, **kwargs):
         self.dataloader = dataloader
         super().__init__(*args, **kwargs)
-        
-    def check_distributed(self, sampler):
-        n_cuda_devices = torch.cuda.device_count()
-        if n_cuda_devices:
-            print(f'Found {n_cuda_devices} cuda devices')
-            model = sampler.diffusion_module.model
-            model = torch.nn.DataParallel(model)
-            model.to(torch.device("cuda:0"))
-            sampler.diffusion_module.model = model 
-            
-    
+
     def get_condition_loader(self, *args, **kwargs):
         return self.dataloader
 
@@ -41,12 +122,14 @@ class CrystalGeneratorInpainting(CrystalGenerator):
         batch_size: int | None = None,
         num_batches: int | None = None,
         target_compositions_dict: list[dict[str, float]] | None = None,
-        output_dir: str = "outputs",
+        fix_cell: bool = True,
     ) -> list[Structure]:
         # Prioritize the runtime provided batch_size, num_batches and target_compositions_dict
         batch_size = batch_size or self.batch_size
         num_batches = num_batches or self.num_batches
-        target_compositions_dict = target_compositions_dict or self.target_compositions_dict
+        target_compositions_dict = (
+            target_compositions_dict or self.target_compositions_dict
+        )
         assert batch_size is not None
         assert num_batches is not None
 
@@ -62,38 +145,33 @@ class CrystalGeneratorInpainting(CrystalGenerator):
 
         print("\nSampling config:")
         print(OmegaConf.to_yaml(sampling_config, resolve=True))
-        condition_loader = self.get_condition_loader(sampling_config, target_compositions_dict)
+        condition_loader = self.get_condition_loader(
+            sampling_config, target_compositions_dict
+        )
 
         sampler_partial = instantiate(sampling_config.sampler_partial)
         sampler = sampler_partial(pl_module=self.model)
-        
-        # self.check_distributed(sampler=sampler)
-        
+
         sampler.diffusion_module.model.denoise_atom_types = False
-        sampler._multi_corruption.corruptions.pop('atomic_numbers', None)
+        sampler._multi_corruption.corruptions.pop("atomic_numbers", None)
 
         print(sampler.diffusion_module.corruption.corruptions)
-
-        print(sampler._predictors.keys())
-        print(sampler._correctors.keys())
-        print(sampler._n_steps_corrector)
 
         generated_structures = draw_samples_from_sampler(
             sampler=sampler,
             condition_loader=condition_loader,
-            cfg=self.cfg,
-            output_path=Path(output_dir),
             properties_to_condition_on=self.properties_to_condition_on,
             record_trajectories=self.record_trajectories,
+            fix_cell=fix_cell,
         )
 
         return generated_structures
 
+
 def generate_reconstructed_structures(
     structures_to_reconstruct: DataLoader,
-    pretrained_name: PRETRAINED_MODEL_NAME | None = 'mattergen_base',
-    output_path: str = None,
-    model_path: str = None,     # '/data/user/reents_t/projects/mlip/git/mattergen/checkpoints/mattergen_base',
+    pretrained_name: PRETRAINED_MODEL_NAME | None = "mattergen_base",
+    model_path: str = None,  # '/data/user/reents_t/projects/mlip/git/mattergen/checkpoints/mattergen_base',
     batch_size: int = 10,
     num_batches: int = 1,
     config_overrides: list[str] | None = None,
@@ -106,6 +184,7 @@ def generate_reconstructed_structures(
     diffusion_guidance_factor: float | None = None,
     strict_checkpoint_loading: bool = True,
     target_compositions: list[dict[str, int]] | None = None,
+    fix_cell: bool = True,
 ):
     """
     Evaluate diffusion model against molecular metrics.
@@ -126,8 +205,12 @@ def generate_reconstructed_structures(
 
     NOTE: When specifying dictionary values via the CLI, make sure there is no whitespace between the key and value, e.g., `--properties_to_condition_on={key1:value1}`.
     """
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
+    assert (
+        pretrained_name is not None or model_path is not None
+    ), "Either pretrained_name or model_path must be provided."
+    assert (
+        pretrained_name is None or model_path is None
+    ), "Only one of pretrained_name or model_path can be provided."
 
     sampling_config_overrides = sampling_config_overrides or []
     config_overrides = config_overrides or []
@@ -145,9 +228,13 @@ def generate_reconstructed_structures(
             config_overrides=config_overrides,
             strict_checkpoint_loading=strict_checkpoint_loading,
         )
-    _sampling_config_path = Path(sampling_config_path) if sampling_config_path is not None else None
+    _sampling_config_path = (
+        Path(sampling_config_path)
+        if sampling_config_path is not None
+        else None
+    )
 
-    generator = CrystalGeneratorInpainting(
+    generator = CrystalInpaintingGenerator(
         dataloader=structures_to_reconstruct,
         checkpoint_info=checkpoint_info,
         properties_to_condition_on=properties_to_condition_on,
@@ -158,9 +245,11 @@ def generate_reconstructed_structures(
         sampling_config_overrides=sampling_config_overrides,
         record_trajectories=record_trajectories,
         diffusion_guidance_factor=(
-            diffusion_guidance_factor if diffusion_guidance_factor is not None else 0.0
+            diffusion_guidance_factor
+            if diffusion_guidance_factor is not None
+            else 0.0
         ),
         target_compositions_dict=target_compositions,
     )
-    
-    return generator.generate(output_dir=Path(output_path))
+
+    return generator.generate(fix_cell=fix_cell)

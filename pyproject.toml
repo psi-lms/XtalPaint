@@ -10,7 +10,7 @@ authors = [{ name = "Timo Reents", email = "timo.reents@psi.ch" }]
 license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = [] 
+dependencies = []
 
 # To-Do: add dependencies as needed
 
@@ -35,7 +35,7 @@ package-dir = {"" = "src"}
 # Black configuration
 [tool.black]
 line-length = 79
-target-version = ['py39']
+target-version = ['py310']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -58,14 +58,9 @@ multi_line_output = 3
 line_length = 79
 known_first_party = ["dbcsi_inpainting"]
 known_third_party = ["numpy", "torch", "pymatgen", "mattergen"]
+src_paths = ["src"]
 
 # pydocstyle configuration
 [tool.pydocstyle]
 convention = "google"
 inherit = false
-ignore = [
-    "D100",  # Missing docstring in public module
-    "D104",  # Missing docstring in public package
-    "D105",  # Missing docstring in magic method
-    "D107",  # Missing docstring in __init__
-]
