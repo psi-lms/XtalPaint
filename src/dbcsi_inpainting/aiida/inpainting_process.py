@@ -4,19 +4,17 @@ import itertools
 from typing import Any, Dict, List, Tuple
 from torch.utils.data import DataLoader
 from pymatgen.core import Structure
-from dbcsi_inpainting.generate_inpainting import generate_reconstructed_structures
-from dbcsi_inpainting.utils import relax_structure
+from dbcsi_inpainting.generate_inpainting import (
+    generate_reconstructed_structures,
+)
 from mattergen.common.utils.eval_utils import save_structures
 from dbcsi_inpainting.evaluation import (
     evaluate_results,
 )
 from dbcsi_inpainting.aiida.config_schema import InpaintingPipelineParams
-from typing import Any, Dict, Iterable, List, Tuple, Union
 import numpy as np
 from pymatgen.core import Structure
-
-from dbcsi_inpainting.utils import relax_structure
-from dbcsi_inpainting.data_utils import create_dataloader
+from dbcsi_inpainting.utils.data_utils import create_dataloader
 
 from dbcsi_inpainting.aiida.data import BatchedStructures, InpaintingStructure
 from mattergen.common.data.dataset import CrystalDataset, structures_to_numpy
@@ -28,7 +26,7 @@ from dbcsi_inpainting.aiida.config_schema import InpaintingPipelineParams
 from ase import Atoms
 
 
-DBSCI_INPAINTING_BASE = 'dbcsi_inpainting.custom_predictor_corrector'
+DBSCI_INPAINTING_BASE = "dbcsi_inpainting.custom_predictor_corrector"
 GUIDED_PREDICTOR_CORRECTOR_MAPPING = {
     "baseline": "mattergen.diffusion.sampling.classifier_free_guidance.GuidedPredictorCorrector.from_pl_module",
     "baseline-reverted-order": f"{DBSCI_INPAINTING_BASE}.GuidedPredictorCorrectorRevertedOrder.from_pl_module",
@@ -38,12 +36,13 @@ GUIDED_PREDICTOR_CORRECTOR_MAPPING = {
     "TD": f"{DBSCI_INPAINTING_BASE}.CustomGuidedPredictorCorrectorNewTimesteps.from_pl_module",
 }
 
+
 def _get_overrides(
-    inpainting_model_params: Dict[str, Any], 
+    inpainting_model_params: Dict[str, Any],
     predictor_corrector: str,
     fix_cell: bool = True,
-    pretrained_name=None
-    ) -> Tuple[List[str], List[str]]:
+    pretrained_name=None,
+) -> Tuple[List[str], List[str]]:
     sampling_config_overrides = [
         f'sampler_partial.N={inpainting_model_params["N_steps"]}',
         f'sampler_partial.n_steps_corrector={inpainting_model_params["n_corrector_steps"]}',
@@ -59,7 +58,7 @@ def _get_overrides(
     if pretrained_name is not None:
         config_overrides = [
             "lightning_module.diffusion_module.corruption.discrete_corruptions.atomic_numbers.d3pm.schedule.num_steps="
-           + f'{inpainting_model_params["N_steps"]}',
+            + f'{inpainting_model_params["N_steps"]}',
         ]
 
     if fix_cell:
@@ -82,8 +81,9 @@ def _get_overrides(
         sampling_config_overrides.append(
             f'+sampler_partial.jump_length={inpainting_model_params["jump_length"]}'
         )
-        
+
     return sampling_config_overrides, config_overrides
+
 
 def _run_inpainting(
     predictor_corrector: str,
@@ -97,8 +97,8 @@ def _run_inpainting(
     """Run the inpainting process using MatterGen."""
     sampling_config_overrides, config_overrides = _get_overrides(
         inpainting_model_params, predictor_corrector, fix_cell, pretrained_name
-        )
-    
+    )
+
     reconstructed_structures = generate_reconstructed_structures(
         structures_to_reconstruct=structures_dl,
         sampling_config_overrides=sampling_config_overrides,
@@ -108,11 +108,12 @@ def _run_inpainting(
         record_trajectories=record_trajectories,
         fix_cell=fix_cell,
     )
-        
+
     return reconstructed_structures
 
+
 def run_inpainting_pipeline(
-    structures: dict[str, Structure | InpaintingStructure], 
+    structures: dict[str, Structure | InpaintingStructure],
     config: InpaintingPipelineParams | dict[str, Any],
 ):
     """Run the inpainting experiment using MatterGen.
@@ -126,36 +127,44 @@ def run_inpainting_pipeline(
         A dictionary containing inpainted structures, relaxed structures (if applicable), and trajectories.
     """
     if isinstance(structures, BatchedStructures):
-        structures = structures.get_structures('pymatgen')
+        structures = structures.get_structures("pymatgen")
     labels, structures = map(list, zip(*structures.items()))
 
+    print(
+        "This is the batch size:",
+        config["inpainting_model_params"].get("batch_size", 64),
+    )
     prepared_structures = __prepare_structures(
-        structures, config['inpainting_model_params'].get('batch_size', 64)
+        structures,
+        batch_size=config["inpainting_model_params"].get("batch_size", 64),
     )
 
     inpainted_structures, trajectories = _run_inpainting(
-        structures_dl=prepared_structures,
-        **config    
+        structures_dl=prepared_structures, **config
     )
 
-    inpainted_structures = {labels[i]: s for i, s in enumerate(inpainted_structures)}
+    inpainted_structures = {
+        labels[i]: s for i, s in enumerate(inpainted_structures)
+    }
     trajectories = {labels[i]: t for i, t in enumerate(trajectories)}
 
-    outputs= {
+    outputs = {
         "structures": BatchedStructures(structures=inpainted_structures),
-            }
+    }
 
-    if config['record_trajectories']:
+    if config["record_trajectories"]:
         outputs.update(
             {
                 "trajectories": trajectories,
-                }
-            )
+            }
+        )
 
     return outputs
 
+
 def __prepare_structures(
-    structures: dict[str, Structure | InpaintingStructure], batch_size: int
+    structures: dict[str, Structure | InpaintingStructure],
+    batch_size: int = 64,
 ) -> DataLoader:
     """Prepare structures for inpainting by converting them to a DataLoader."""
     np.random.seed(1234)
@@ -164,7 +173,7 @@ def __prepare_structures(
     dataset = CrystalDataset(
         **structures_numpy,
         properties=properties,
-        transforms=[symmetrize_lattice, set_chemical_system_string]
+        transforms=[symmetrize_lattice, set_chemical_system_string],
     )
 
     return create_dataloader(dataset, batch_size)

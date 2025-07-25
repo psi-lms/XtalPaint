@@ -17,18 +17,16 @@ logger.level("ERROR")
 
 
 def relax_atoms(
-    atoms: list[Atoms], device: str = str(get_device()), load_path: str = None, **kwargs
+    atoms: list[Atoms],
+    device: str = str(get_device()),
+    load_path: str = None,
+    **kwargs,
 ) -> tuple[list[Atoms], np.ndarray]:
     potential = Potential.from_checkpoint(
         device=device, load_path=load_path, load_training_state=False
     )
-    
-    print('potential device: ', device)
-    
-    batch_relaxer = BatchRelaxer(
-        potential=potential, 
-        # filter="EXPCELLFILTER", 
-        **kwargs)
+
+    batch_relaxer = BatchRelaxer(potential=potential, **kwargs)
     relaxation_trajectories = batch_relaxer.relax(atoms)
     relaxed_atoms = [t[-1] for t in relaxation_trajectories.values()]
     total_energies = np.array([a.info["total_energy"] for a in relaxed_atoms])
@@ -39,18 +37,25 @@ def relax_structures(
     structures: Structure | list[Structure],
     device: str = str(get_device()),
     load_path: str = None,
-    **kwargs
+    fix_elements: list[str] = None,
+    **kwargs,
 ) -> tuple[list[Structure], np.ndarray]:
     if isinstance(structures, Structure):
         structures = [structures]
+
+    if fix_elements is None:
+        fix_elements = []
+
     atoms = [AseAtomsAdaptor.get_atoms(s) for s in structures]
     for a in atoms:
-        c = FixAtoms(mask=[atom.symbol != 'H' for atom in a])
-
+        c = FixAtoms(mask=[atom.symbol in fix_elements for atom in a])
         a.set_constraint(c)
 
-    
     print([type(a) for a in atoms])
-    relaxed_atoms, total_energies = relax_atoms(atoms, device=device, load_path=load_path, **kwargs)
-    relaxed_structures = [AseAtomsAdaptor.get_structure(a) for a in relaxed_atoms]
+    relaxed_atoms, total_energies = relax_atoms(
+        atoms, device=device, load_path=load_path, **kwargs
+    )
+    relaxed_structures = [
+        AseAtomsAdaptor.get_structure(a) for a in relaxed_atoms
+    ]
     return relaxed_structures, total_energies
