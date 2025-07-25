@@ -24,6 +24,10 @@ dev = [
 ]
 
 
+[project.entry-points."aiida.data"]
+"dbcsi_inpainting.InpaintingStructure" = "dbcsi_inpainting.aiida.data:InpaintingStructure"
+"dbcsi_inpainting.BatchedStructuresData" = "dbcsi_inpainting.aiida.data:BatchedStructuresData"
+
 [tool.setuptools]
 packages = ["dbcsi_inpainting"]
 package-dir = {"" = "src"}
