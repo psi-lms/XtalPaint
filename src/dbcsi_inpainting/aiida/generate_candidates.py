@@ -45,7 +45,10 @@ def _structures_to_pymatgen(
                 structures_pmt[key] = s_pmt
             return structures_pmt
     else:
-        raise TypeError("Input must be a list or dictionary of pymatgen Structure objects.")
+        raise TypeError(
+            "Input must be a list or dictionary of pymatgen Structure objects."
+        )
+
 
 def _prepare_inpainting_inputs(
     structures: Union[Structure, Iterable[Structure], Dict[str, Structure]],
@@ -53,7 +56,7 @@ def _prepare_inpainting_inputs(
     element: Union[str, List[str]],
 ):
     if not isinstance(structures, (list, dict)):
-        structures = {'0': structures}
+        structures = {"0": structures}
 
     structures = _structures_to_pymatgen(structures)
 
@@ -63,17 +66,30 @@ def _prepare_inpainting_inputs(
         n_inp = {key: n_inp for key in structures.keys()}
 
     if not all(
-        [len(n) == 2 if isinstance(n, list) else isinstance(n, int) for n in n_inp.values()]
+        [
+            len(n) == 2 if isinstance(n, list) else isinstance(n, int)
+            for n in n_inp.values()
+        ]
     ):
-        raise ValueError("n_inp must be an int or a list of two ints (start, end)")
+        raise ValueError(
+            "n_inp must be an int or a list of two ints (start, end)"
+        )
 
     return structures, n_inp, element
 
+
 def structure_to_inpainting_candidates(
-    structure: Structure, strct_key: str, num_inpaint_sites: Union[int, Tuple], element: str, num_samples: int = 1
+    structure: Structure,
+    strct_key: str,
+    num_inpaint_sites: Union[int, Tuple],
+    element: str,
+    num_samples: int = 1,
 ) -> List[Structure]:
 
-    if isinstance(num_inpaint_sites, tuple) and not len(num_inpaint_sites) == 2:
+    if (
+        isinstance(num_inpaint_sites, tuple)
+        and not len(num_inpaint_sites) == 2
+    ):
         raise ValueError(
             "num_inpaint_sites must be an int or a tuple of two ints (start, end)"
         )
@@ -91,12 +107,12 @@ def structure_to_inpainting_candidates(
             label = strct_key
             if num_inpaint_sites[0] != num_inpaint_sites[1]:
                 label += f"_n_inp_{j}"
-                
+
             if num_samples > 1:
                 label += f"_sample_{i_sample}"
 
             s_removed.properties["material_id"] = label
-            
+
             structures_sites_removed[label] = s_removed
 
     return structures_sites_removed
@@ -129,10 +145,11 @@ def generate_inpainting_candidates(
         candidates.update(
             structure_to_inpainting_candidates(
                 structures[key], key, n_inp[key], element[key], num_samples
-                )
             )
+        )
 
     return candidates
+
 
 @task(
     inputs=[
@@ -158,8 +175,9 @@ def _aiida_generate_inpainting_candidates(
 ) -> BatchedStructures:
 
     candidates = generate_inpainting_candidates(
-        structures=structures, n_inp=n_inp, element=element, num_samples=num_samples
+        structures=structures,
+        n_inp=n_inp,
+        element=element,
+        num_samples=num_samples,
     )
-    return {
-        "candidates": BatchedStructures(candidates)
-    }
+    return {"candidates": BatchedStructures(candidates)}

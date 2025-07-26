@@ -130,10 +130,6 @@ def run_inpainting_pipeline(
         structures = structures.get_structures("pymatgen")
     labels, structures = map(list, zip(*structures.items()))
 
-    print(
-        "This is the batch size:",
-        config["inpainting_model_params"].get("batch_size", 64),
-    )
     prepared_structures = __prepare_structures(
         structures,
         batch_size=config["inpainting_model_params"].get("batch_size", 64),

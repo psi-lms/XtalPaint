@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from mattergen.diffusion.sampling.pc_sampler import PredictorCorrector, _mask_replace
+from mattergen.diffusion.sampling.pc_sampler import (
+    PredictorCorrector,
+    _mask_replace,
+)
 
 from typing import Tuple, TypeVar
 
@@ -9,93 +12,21 @@ from tqdm.auto import tqdm
 
 from mattergen.diffusion.corruption.multi_corruption import apply
 from mattergen.diffusion.data.batched_data import BatchedData
-from mattergen.diffusion.sampling.classifier_free_guidance import GuidedPredictorCorrector
+from mattergen.diffusion.sampling.classifier_free_guidance import (
+    GuidedPredictorCorrector,
+)
 
 Diffusable = TypeVar(
     "Diffusable", bound=BatchedData
 )  # Don't use 'T' because it clashes with the 'T' for time
 
-SampleAndMeanAndMaybeRecords = Tuple[Diffusable, Diffusable, list[Diffusable] | None]
+SampleAndMeanAndMaybeRecords = Tuple[
+    Diffusable, Diffusable, list[Diffusable] | None
+]
 
-
-# class CustomPredictorCorrector(PredictorCorrector):
-
-    # @torch.no_grad()
-    # def _denoise(
-    #     self,
-    #     batch: Diffusable,
-    #     mask: dict[str, torch.Tensor],
-    #     record: bool = False,
-    # ) -> SampleAndMeanAndMaybeRecords:
-    #     """Denoise from a prior sample to a t=eps_t sample."""
-    #     recorded_samples = None
-    #     if record:
-    #         recorded_samples = []
-    #     for k in self._predictors:
-    #         mask.setdefault(k, None)
-    #     for k in self._correctors:
-    #         mask.setdefault(k, None)
-    #     mean_batch = batch.clone()
-
-    #     # Decreasing timesteps from T to eps_t
-    #     timesteps = torch.linspace(self._max_t, self._eps_t, self.N, device=self._device)
-    #     dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(self._device)
-
-    #     for i in tqdm(range(self.N), miniters=50, mininterval=5):
-    #         # Set the timestep
-    #         t = torch.full((batch.get_batch_size(),), timesteps[i], device=self._device)
-            
-    #         noisy_sample = self.diffusion_module.corruption.sample_marginal(batch, t)
-
-    #         print('Before adding noise to host', batch)
-            
-    #         batch = batch['pos'].lerp_(noisy_sample['pos'], mask['pos'])
-            
-    #         print('After adding noise to host', batch)
-            
-    #         # Corrector updates.
-    #         if self._correctors:
-    #             for _ in range(self._n_steps_corrector):
-    #                 score = self._score_fn(batch, t)
-    #                 fns = {
-    #                     k: corrector.step_given_score for k, corrector in self._correctors.items()
-    #                 }
-    #                 samples_means: dict[str, Tuple[torch.Tensor, torch.Tensor]] = apply(
-    #                     fns=fns,
-    #                     broadcast={"t": t},
-    #                     x=batch,
-    #                     score=score,
-    #                     batch_idx=self._multi_corruption._get_batch_indices(batch),
-    #                 )
-    #                 if record:
-    #                     recorded_samples.append(batch.clone().to("cpu"))
-    #                 batch, mean_batch = _mask_replace(
-    #                     samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=mask
-    #                 )
-
-    #         # Predictor updates
-    #         score = self._score_fn(batch, t)
-    #         predictor_fns = {
-    #             k: predictor.update_given_score for k, predictor in self._predictors.items()
-    #         }
-    #         samples_means = apply(
-    #             fns=predictor_fns,
-    #             x=batch,
-    #             score=score,
-    #             broadcast=dict(t=t, batch=batch, dt=dt),
-    #             batch_idx=self._multi_corruption._get_batch_indices(batch),
-    #         )
-    #         if record:
-    #             recorded_samples.append(batch.clone().to("cpu"))
-    #         batch, mean_batch = _mask_replace(
-    #             samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=mask
-    #         )
-
-    #     return batch, mean_batch, recorded_samples
-    
 
 class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
-    
+
     @torch.no_grad()
     def _denoise(
         self,
@@ -117,55 +48,72 @@ class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
         mean_batch = batch.clone()
 
         # Decreasing timesteps from T to eps_t
-        timesteps = torch.linspace(self._max_t, self._eps_t, self.N, device=self._device)
-        dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(self._device)
+        timesteps = torch.linspace(
+            self._max_t, self._eps_t, self.N, device=self._device
+        )
+        dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(
+            self._device
+        )
         batch0 = batch.clone()
-        
-        print('device of tensor: ', batch0['pos'].device)
-        
+
+        print("device of tensor: ", batch0["pos"].device)
+
         # print('This is the batch0', batch0['pos'], batch0['cell'], batch0['atomic_numbers'])
 
         for i in tqdm(range(self.N), miniters=50, mininterval=5):
             # Set the timestep
-            t = torch.full((batch.get_batch_size(),), timesteps[i], device=self._device)
-            
-            noisy_sample = self.diffusion_module.corruption.sample_marginal(batch0, t)
+            t = torch.full(
+                (batch.get_batch_size(),), timesteps[i], device=self._device
+            )
+
+            noisy_sample = self.diffusion_module.corruption.sample_marginal(
+                batch0, t
+            )
 
             # print('Before adding noise to host', batch['pos'], batch['cell'], batch['atomic_numbers'])
-            
-            batch['pos'] = batch['pos'].lerp_(noisy_sample['pos'], mask['pos'])
-            batch['cell'] = noisy_sample['cell']
-            
+
+            batch["pos"] = batch["pos"].lerp_(noisy_sample["pos"], mask["pos"])
+            batch["cell"] = noisy_sample["cell"]
+
             # print('After adding noise to host', batch['pos'], batch['atomic_numbers'])
             # print('cell', batch['cell'])
             # print('This is the batch0', batch0['pos'], batch0['atomic_numbers'])
-            
+
             # print('\n\n\n')
-            
+
             # Corrector updates.
             if self._correctors:
                 for _ in range(self._n_steps_corrector):
                     score = self._score_fn(batch, t)
                     fns = {
-                        k: corrector.step_given_score for k, corrector in self._correctors.items()
+                        k: corrector.step_given_score
+                        for k, corrector in self._correctors.items()
                     }
-                    samples_means: dict[str, Tuple[torch.Tensor, torch.Tensor]] = apply(
+                    samples_means: dict[
+                        str, Tuple[torch.Tensor, torch.Tensor]
+                    ] = apply(
                         fns=fns,
                         broadcast={"t": t, "dt": dt},
                         x=batch,
                         score=score,
-                        batch_idx=self._multi_corruption._get_batch_indices(batch),
+                        batch_idx=self._multi_corruption._get_batch_indices(
+                            batch
+                        ),
                     )
                     if record:
                         recorded_samples.append(batch.clone().to("cpu"))
                     batch, mean_batch = _mask_replace(
-                        samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=dummy_mask
+                        samples_means=samples_means,
+                        batch=batch,
+                        mean_batch=mean_batch,
+                        mask=dummy_mask,
                     )
 
             # Predictor updates
             score = self._score_fn(batch, t)
             predictor_fns = {
-                k: predictor.update_given_score for k, predictor in self._predictors.items()
+                k: predictor.update_given_score
+                for k, predictor in self._predictors.items()
             }
             samples_means = apply(
                 fns=predictor_fns,
@@ -177,13 +125,17 @@ class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
             if record:
                 recorded_samples.append(batch.clone().to("cpu"))
             batch, mean_batch = _mask_replace(
-                samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=dummy_mask
+                samples_means=samples_means,
+                batch=batch,
+                mean_batch=mean_batch,
+                mask=dummy_mask,
             )
 
         return batch, mean_batch, recorded_samples
 
-    
+
 class GuidedPredictorCorrectorRevertedOrder(GuidedPredictorCorrector):
+
     @torch.no_grad()
     def _denoise(
         self,
@@ -202,18 +154,24 @@ class GuidedPredictorCorrectorRevertedOrder(GuidedPredictorCorrector):
         mean_batch = batch.clone()
 
         # Decreasing timesteps from T to eps_t
-        timesteps = torch.linspace(self._max_t, self._eps_t, self.N, device=self._device)
-        dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(self._device)
+        timesteps = torch.linspace(
+            self._max_t, self._eps_t, self.N, device=self._device
+        )
+        dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(
+            self._device
+        )
 
         for i in tqdm(range(self.N), miniters=50, mininterval=5):
             # Set the timestep
-            t = torch.full((batch.get_batch_size(),), timesteps[i], device=self._device)
-
+            t = torch.full(
+                (batch.get_batch_size(),), timesteps[i], device=self._device
+            )
 
             # Predictor updates
             score = self._score_fn(batch, t)
             predictor_fns = {
-                k: predictor.update_given_score for k, predictor in self._predictors.items()
+                k: predictor.update_given_score
+                for k, predictor in self._predictors.items()
             }
             samples_means = apply(
                 fns=predictor_fns,
@@ -225,41 +183,49 @@ class GuidedPredictorCorrectorRevertedOrder(GuidedPredictorCorrector):
             if record:
                 recorded_samples.append(batch.clone().to("cpu"))
             batch, mean_batch = _mask_replace(
-                samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=mask
+                samples_means=samples_means,
+                batch=batch,
+                mean_batch=mean_batch,
+                mask=mask,
             )
 
             # Corrector updates.
             if self._correctors:
                 for _ in range(self._n_steps_corrector):
-                    score = self._score_fn(batch, t+dt)
+                    score = self._score_fn(batch, t + dt)
                     fns = {
-                        k: corrector.step_given_score for k, corrector in self._correctors.items()
+                        k: corrector.step_given_score
+                        for k, corrector in self._correctors.items()
                     }
-                    samples_means: dict[str, Tuple[torch.Tensor, torch.Tensor]] = apply(
+                    samples_means: dict[
+                        str, Tuple[torch.Tensor, torch.Tensor]
+                    ] = apply(
                         fns=fns,
-                        broadcast={"t": t+dt, "dt": dt},
+                        broadcast={"t": t + dt, "dt": dt},
                         x=batch,
                         score=score,
-                        batch_idx=self._multi_corruption._get_batch_indices(batch),
+                        batch_idx=self._multi_corruption._get_batch_indices(
+                            batch
+                        ),
                     )
                     if record:
                         recorded_samples.append(batch.clone().to("cpu"))
                     batch, mean_batch = _mask_replace(
-                        samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=mask
+                        samples_means=samples_means,
+                        batch=batch,
+                        mean_batch=mean_batch,
+                        mask=mask,
                     )
 
         return batch, mean_batch, recorded_samples
 
 
-    
-    
 class CustomGuidedPredictorCorrectorRePaint(GuidedPredictorCorrector):
-    
+
     def __init__(self, **kwargs):
-        self.n_resample_steps = kwargs.pop('n_resample_steps', 1)
-        
+        self.n_resample_steps = kwargs.pop("n_resample_steps", 1)
+
         super().__init__(**kwargs)
-        
 
     @torch.no_grad()
     def _denoise(
@@ -280,28 +246,38 @@ class CustomGuidedPredictorCorrectorRePaint(GuidedPredictorCorrector):
             mask.setdefault(k, None)
             ignore_mask.setdefault(k, None)
         mean_batch = batch.clone()
-        
+
         # ignore_mask = mask
 
         # Decreasing timesteps from T to eps_t
-        timesteps = torch.linspace(self._max_t, self._eps_t, self.N, device=self._device)
-        dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(self._device)
+        timesteps = torch.linspace(
+            self._max_t, self._eps_t, self.N, device=self._device
+        )
+        dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(
+            self._device
+        )
 
         batch0 = batch.clone()
         noisy_sample = self.diffusion_module.corruption.sample_marginal(
-            batch0, torch.full((batch.get_batch_size(),), timesteps[0], device=self._device)
-            )
-        batch['pos'] = batch['pos'].lerp_(noisy_sample['pos'], mask['pos'])
+            batch0,
+            torch.full(
+                (batch.get_batch_size(),), timesteps[0], device=self._device
+            ),
+        )
+        batch["pos"] = batch["pos"].lerp_(noisy_sample["pos"], mask["pos"])
 
         for i in tqdm(range(self.N), miniters=50, mininterval=5):
             # Set the timestep
-            t = torch.full((batch.get_batch_size(),), timesteps[i], device=self._device)
+            t = torch.full(
+                (batch.get_batch_size(),), timesteps[i], device=self._device
+            )
 
             for i_res in range(self.n_resample_steps):
                 # Predictor updates
                 score = self._score_fn(batch, t)
                 predictor_fns = {
-                    k: predictor.update_given_score for k, predictor in self._predictors.items()
+                    k: predictor.update_given_score
+                    for k, predictor in self._predictors.items()
                 }
                 samples_means = apply(
                     fns=predictor_fns,
@@ -315,33 +291,50 @@ class CustomGuidedPredictorCorrectorRePaint(GuidedPredictorCorrector):
 
                 # TR: I set mask to None, so that the predictor steps are alos passed to the corrector
                 batch, mean_batch = _mask_replace(
-                    samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=ignore_mask
+                    samples_means=samples_means,
+                    batch=batch,
+                    mean_batch=mean_batch,
+                    mask=ignore_mask,
                 )
 
                 # Corrector updates.
                 if self._correctors:
                     for _ in range(self._n_steps_corrector):
-                        score = self._score_fn(batch, t+dt)
+                        score = self._score_fn(batch, t + dt)
                         fns = {
-                            k: corrector.step_given_score for k, corrector in self._correctors.items()
+                            k: corrector.step_given_score
+                            for k, corrector in self._correctors.items()
                         }
-                        samples_means: dict[str, Tuple[torch.Tensor, torch.Tensor]] = apply(
+                        samples_means: dict[
+                            str, Tuple[torch.Tensor, torch.Tensor]
+                        ] = apply(
                             fns=fns,
-                            broadcast={"t": t+dt, "dt": dt},
+                            broadcast={"t": t + dt, "dt": dt},
                             x=batch,
                             score=score,
-                            batch_idx=self._multi_corruption._get_batch_indices(batch),
+                            batch_idx=self._multi_corruption._get_batch_indices(
+                                batch
+                            ),
                         )
                         if record:
                             recorded_samples.append(batch.clone().to("cpu"))
                         # TR: Setting mask to None with the same reason as mentioned above
                         batch, mean_batch = _mask_replace(
-                            samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=ignore_mask
+                            samples_means=samples_means,
+                            batch=batch,
+                            mean_batch=mean_batch,
+                            mask=ignore_mask,
                         )
                 if i < self.N - 1 and True:
-                    noisy_sample = self.diffusion_module.corruption.sample_marginal(batch0, t+dt if i < self.N - 1 else t)
-                    batch['pos'] = batch['pos'].lerp_(noisy_sample['pos'], mask['pos'])
-                
+                    noisy_sample = (
+                        self.diffusion_module.corruption.sample_marginal(
+                            batch0, t + dt if i < self.N - 1 else t
+                        )
+                    )
+                    batch["pos"] = batch["pos"].lerp_(
+                        noisy_sample["pos"], mask["pos"]
+                    )
+
                 if i_res < self.n_resample_steps - 1 and i < self.N - 1:
                     # print('Resampling')
                     # t_prev = torch.full((batch.get_batch_size(),), timesteps[i+1], device=self._device)
@@ -349,40 +342,43 @@ class CustomGuidedPredictorCorrectorRePaint(GuidedPredictorCorrector):
                     #     t_prev2 = t_prev
                     # else:
                     #     t_prev2 = torch.full((batch.get_batch_size(),), timesteps[i+2], device=self._device)
-                    
+
                     # Get the sqrt(sigma_{t-1} ** 2 - sigma_{t-2} ** 2)
-                    only_for_z, sigma_t_prev_t_prev2, _ = self._predictors['pos']._get_coeffs(
-                        x=batch['pos'],
-                        t=t+dt, 
-                        batch=batch, 
+                    only_for_z, sigma_t_prev_t_prev2, _ = self._predictors[
+                        "pos"
+                    ]._get_coeffs(
+                        x=batch["pos"],
+                        t=t + dt,
+                        batch=batch,
                         dt=dt,
-                        batch_idx=self._multi_corruption._get_batch_indices(batch)['pos']
+                        batch_idx=self._multi_corruption._get_batch_indices(
+                            batch
+                        )["pos"],
                     )
                     z = torch.randn_like(only_for_z)
-                    batch['pos'] = self._multi_corruption.corruptions['pos'].wrap(
-                        batch['pos'] + sigma_t_prev_t_prev2 * z
-                    )
+                    batch["pos"] = self._multi_corruption.corruptions[
+                        "pos"
+                    ].wrap(batch["pos"] + sigma_t_prev_t_prev2 * z)
 
         return batch, mean_batch, recorded_samples
 
 
 def time_jump_scheduler(t_T=250, jump_len=10, jump_n_sample=10):
-    
 
     jumps = {}
     for j in range(0, t_T - jump_len, jump_n_sample - 1):
         jumps[j] = jump_n_sample - 1
-    
+
     # Start at t_T
     t = t_T
     ts = []
-    
+
     # Continue until t drops below 1
     while t >= 1:
         # Decrement t by 1
         t -= 1
         ts.append(t)
-        
+
         if jumps.get(t, 0) > 0:
             jumps[t] = jumps[t] - 1
             for _ in range(jump_len):
@@ -390,15 +386,15 @@ def time_jump_scheduler(t_T=250, jump_len=10, jump_n_sample=10):
                 ts.append(t)
 
     return ts
-    
+
+
 class CustomGuidedPredictorCorrectorRePaintV2(GuidedPredictorCorrector):
-    
+
     def __init__(self, **kwargs):
-        self.n_resample_steps = kwargs.pop('n_resample_steps', 1)
-        self.jump_length = kwargs.pop('jump_length', 10)
-        
+        self.n_resample_steps = kwargs.pop("n_resample_steps", 1)
+        self.jump_length = kwargs.pop("jump_length", 10)
+
         super().__init__(**kwargs)
-        
 
     @torch.no_grad()
     def _denoise(
@@ -409,9 +405,11 @@ class CustomGuidedPredictorCorrectorRePaintV2(GuidedPredictorCorrector):
     ) -> SampleAndMeanAndMaybeRecords:
         """Denoise from a prior sample to a t=eps_t sample."""
         recorded_samples = None
+        recorded_means = None
         ignore_mask = {}
         if record:
             recorded_samples = []
+            recorded_means = []
         for k in self._predictors:
             mask.setdefault(k, None)
             ignore_mask.setdefault(k, None)
@@ -419,34 +417,47 @@ class CustomGuidedPredictorCorrectorRePaintV2(GuidedPredictorCorrector):
             mask.setdefault(k, None)
             ignore_mask.setdefault(k, None)
         mean_batch = batch.clone()
-        
+
         # ignore_mask = mask
 
         # Decreasing timesteps from T to eps_t
-        timesteps = torch.linspace(self._eps_t, self._max_t, self.N, device=self._device)
-        dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(self._device)
+        timesteps = torch.linspace(
+            self._eps_t, self._max_t, self.N, device=self._device
+        )
+        dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(
+            self._device
+        )
 
         batch0 = batch.clone()
-        
-        scheduled_timesteps = time_jump_scheduler(t_T=self.N, jump_len=self.jump_length, jump_n_sample=self.n_resample_steps)
+
+        scheduled_timesteps = time_jump_scheduler(
+            t_T=self.N,
+            jump_len=self.jump_length,
+            jump_n_sample=self.n_resample_steps,
+        )
 
         t_last = 10
         for i in tqdm(scheduled_timesteps, miniters=50, mininterval=5):
             # Set the timestep
             t_cur = timesteps[i]
-            t = torch.full((batch.get_batch_size(),), t_cur, device=self._device)
+            t = torch.full(
+                (batch.get_batch_size(),), t_cur, device=self._device
+            )
 
             if t_cur < t_last:
-                noisy_sample = self.diffusion_module.corruption.sample_marginal(
-                    batch0, t
-                    )
-                batch['pos'] = batch['pos'].lerp_(noisy_sample['pos'], mask['pos'])
+                noisy_sample = (
+                    self.diffusion_module.corruption.sample_marginal(batch0, t)
+                )
+                batch["pos"] = batch["pos"].lerp_(
+                    noisy_sample["pos"], mask["pos"]
+                )
 
                 # for i_res in range(self.n_resample_steps):
                 # Predictor updates
                 score = self._score_fn(batch, t)
                 predictor_fns = {
-                    k: predictor.update_given_score for k, predictor in self._predictors.items()
+                    k: predictor.update_given_score
+                    for k, predictor in self._predictors.items()
                 }
                 samples_means = apply(
                     fns=predictor_fns,
@@ -457,35 +468,50 @@ class CustomGuidedPredictorCorrectorRePaintV2(GuidedPredictorCorrector):
                 )
                 if record:
                     recorded_samples.append(batch.clone().to("cpu"))
+                    recorded_means.append(mean_batch.clone().to("cpu"))
 
                 # TR: I set mask to None, so that the predictor steps are also passed to the corrector
                 batch, mean_batch = _mask_replace(
-                    samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=ignore_mask
+                    samples_means=samples_means,
+                    batch=batch,
+                    mean_batch=mean_batch,
+                    mask=ignore_mask,
                 )
 
                 # Corrector updates.
                 if self._correctors:
                     for _ in range(self._n_steps_corrector):
-                        score = self._score_fn(batch, t+dt)
+                        score = self._score_fn(batch, t + dt)
                         fns = {
-                            k: corrector.step_given_score for k, corrector in self._correctors.items()
+                            k: corrector.step_given_score
+                            for k, corrector in self._correctors.items()
                         }
-                        samples_means: dict[str, Tuple[torch.Tensor, torch.Tensor]] = apply(
+                        samples_means: dict[
+                            str, Tuple[torch.Tensor, torch.Tensor]
+                        ] = apply(
                             fns=fns,
-                            broadcast={"t": t+dt, "dt": dt},
+                            broadcast={"t": t + dt, "dt": dt},
                             x=batch,
                             score=score,
-                            batch_idx=self._multi_corruption._get_batch_indices(batch),
+                            batch_idx=self._multi_corruption._get_batch_indices(
+                                batch
+                            ),
                         )
                         if record:
                             recorded_samples.append(batch.clone().to("cpu"))
+                            recorded_means.append(mean_batch.clone().to("cpu"))
                         # TR: Setting mask to None with the same reason as mentioned above
                         batch, mean_batch = _mask_replace(
-                            samples_means=samples_means, batch=batch, mean_batch=mean_batch, mask=ignore_mask
+                            samples_means=samples_means,
+                            batch=batch,
+                            mean_batch=mean_batch,
+                            mask=ignore_mask,
                         )
             else:
-                t = torch.full((batch.get_batch_size(),), t_last, device=self._device)
-                
+                t = torch.full(
+                    (batch.get_batch_size(),), t_last, device=self._device
+                )
+
                 # noisy_sample = self.diffusion_module.corruption.sample_marginal(batch0, t_last)
                 # batch['pos'] = batch['pos'].lerp_(noisy_sample['pos'], mask['pos'])
                 if i > 0:
@@ -495,24 +521,28 @@ class CustomGuidedPredictorCorrectorRePaintV2(GuidedPredictorCorrector):
                     #     t_prev2 = t_prev
                     # else:
                     #     t_prev2 = torch.full((batch.get_batch_size(),), timesteps[i+2], device=self._device)
-                    
+
                     # Get the sqrt(sigma_{t-1} ** 2 - sigma_{t-2} ** 2)
-                    only_for_z, sigma_t_prev_t_prev2, _ = self._predictors['pos']._get_coeffs(
-                        x=batch['pos'],
-                        t=t+dt, 
-                        batch=batch, 
+                    only_for_z, sigma_t_prev_t_prev2, _ = self._predictors[
+                        "pos"
+                    ]._get_coeffs(
+                        x=batch["pos"],
+                        t=t + dt,
+                        batch=batch,
                         dt=dt,
-                        batch_idx=self._multi_corruption._get_batch_indices(batch)['pos']
+                        batch_idx=self._multi_corruption._get_batch_indices(
+                            batch
+                        )["pos"],
                     )
                     z = torch.randn_like(only_for_z)
-                    batch['pos'] = self._multi_corruption.corruptions['pos'].wrap(
-                        batch['pos'] + sigma_t_prev_t_prev2 * z
-                    )
-            
+                    batch["pos"] = self._multi_corruption.corruptions[
+                        "pos"
+                    ].wrap(batch["pos"] + sigma_t_prev_t_prev2 * z)
+
             t_last = t_cur
 
             # if i < self.N - 1 and True:
-            
+
             # if i_res < self.n_resample_steps - 1 and i < self.N - 1:
             #     print('Resampling')
             #     # t_prev = torch.full((batch.get_batch_size(),), timesteps[i+1], device=self._device)
@@ -520,12 +550,12 @@ class CustomGuidedPredictorCorrectorRePaintV2(GuidedPredictorCorrector):
             #     #     t_prev2 = t_prev
             #     # else:
             #     #     t_prev2 = torch.full((batch.get_batch_size(),), timesteps[i+2], device=self._device)
-                
+
             #     # Get the sqrt(sigma_{t-1} ** 2 - sigma_{t-2} ** 2)
             #     only_for_z, sigma_t_prev_t_prev2, _ = self._predictors['pos']._get_coeffs(
             #         x=batch['pos'],
-            #         t=t+dt, 
-            #         batch=batch, 
+            #         t=t+dt,
+            #         batch=batch,
             #         dt=dt,
             #         batch_idx=self._multi_corruption._get_batch_indices(batch)['pos']
             #     )
@@ -534,7 +564,7 @@ class CustomGuidedPredictorCorrectorRePaintV2(GuidedPredictorCorrector):
             #         batch['pos'] + sigma_t_prev_t_prev2 * z
             #     )
 
-        return batch, mean_batch, recorded_samples
+        return batch, mean_batch, recorded_samples, recorded_means
 
     # def __init__(
     #     self,
@@ -555,3 +585,120 @@ class CustomGuidedPredictorCorrectorRePaintV2(GuidedPredictorCorrector):
     #     self._remove_conditioning_fn = remove_conditioning_fn
     #     self._keep_conditioning_fn = keep_conditioning_fn or identity
     #     self._guidance_scale = guidance_scale
+
+
+class CustomGuidedPredictorCorrectorNewTimesteps(GuidedPredictorCorrector):
+
+    @torch.no_grad()
+    def _denoise(
+        self,
+        batch: Diffusable,
+        mask: dict[str, torch.Tensor],
+        record: bool = False,
+    ) -> SampleAndMeanAndMaybeRecords:
+        """Denoise from a prior sample to a t=eps_t sample."""
+        recorded_samples = None
+        recorded_means = None
+        ignore_mask = {}
+        if record:
+            recorded_samples = []
+            recorded_means = []
+        for k in self._predictors:
+            mask.setdefault(k, None)
+            ignore_mask.setdefault(k, None)
+        for k in self._correctors:
+            mask.setdefault(k, None)
+            ignore_mask.setdefault(k, None)
+        mean_batch = batch.clone()
+
+        ignore_mask = mask
+
+        # Decreasing timesteps from T to eps_t
+        timesteps = torch.linspace(
+            self._max_t, self._eps_t, self.N, device=self._device
+        )
+        dt = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(
+            self._device
+        )
+        # dt0 = -torch.tensor((self._max_t - self._eps_t) / (self.N - 1)).to(self._device)
+
+        # timesteps = timesteps ** 2
+
+        # print(batch['pos'], batch['atomic_numbers'])
+
+        for i in tqdm(range(self.N), miniters=50, mininterval=5):
+            # Set the timestep
+            batch_size = batch.get_batch_size()
+            batch_size = batch["pos"].shape[0]
+            t = torch.full((batch_size,), timesteps[i], device=self._device)
+
+            # if i < self.N - 1:
+            #     dt = torch.tensor(timesteps[i+1] - timesteps[i])
+            # else:
+            #     dt = dt0
+
+            t[mask["pos"][:, 0].bool()] = self._eps_t
+            # print(t)
+
+            # Corrector updates.
+            if self._correctors:
+                for _ in range(self._n_steps_corrector):
+                    score = self._score_fn(batch, t)
+                    fns = {
+                        k: corrector.step_given_score
+                        for k, corrector in self._correctors.items()
+                    }
+                    samples_means: dict[
+                        str, Tuple[torch.Tensor, torch.Tensor]
+                    ] = apply(
+                        fns=fns,
+                        broadcast={"t": t, "dt": dt},
+                        x=batch,
+                        score=score,
+                        # batch_idx={'pos': None},#
+                        batch_idx=self._multi_corruption._get_batch_indices(
+                            batch
+                        ),
+                        mask={"pos": mask["pos"][:, 0]},
+                    )
+                    if record:
+                        recorded_samples.append(batch.clone().to("cpu"))
+                        recorded_means.append(mean_batch.clone().to("cpu"))
+                    batch, mean_batch = _mask_replace(
+                        samples_means=samples_means,
+                        batch=batch,
+                        mean_batch=mean_batch,
+                        mask=ignore_mask,
+                    )
+                    # print('corr', batch['pos'])
+
+            # Predictor updates
+            score = self._score_fn(batch, t)
+            predictor_fns = {
+                k: predictor.update_given_score
+                for k, predictor in self._predictors.items()
+            }
+
+            samples_means = apply(
+                fns=predictor_fns,
+                x=batch,
+                score=score,
+                broadcast=dict(t=t, batch=batch, dt=dt),
+                batch_idx=self._multi_corruption._get_batch_indices(batch),
+                # batch_idx={
+                #     # 'pos': torch.arange(batch_size, device=self._device, dtype=torch.int64)
+                #     'pos': None
+                #     },
+            )
+            if record:
+                recorded_samples.append(batch.clone().to("cpu"))
+                recorded_means.append(mean_batch.clone().to("cpu"))
+            batch, mean_batch = _mask_replace(
+                samples_means=samples_means,
+                batch=batch,
+                mean_batch=mean_batch,
+                mask=ignore_mask,
+            )
+            # print('pred', batch['pos'])
+
+        return batch, mean_batch, recorded_samples, recorded_means
