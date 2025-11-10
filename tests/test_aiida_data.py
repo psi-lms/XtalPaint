@@ -6,11 +6,11 @@ from pymatgen.core import Lattice, Structure
 
 from dbcsi_inpainting.aiida.data import (
     BatchedStructures,
-    InpaintingStructure,
     BatchedStructuresData,
-    convert_structure,
+    InpaintingStructureData,
     extract_from_batched_structures,
 )
+from dbcsi_inpainting.data import convert_structure
 
 
 @pytest.fixture
@@ -89,7 +89,7 @@ def test_inpainting_structure_roundtrip_with_nan(
         coords.tolist(),
     )
 
-    node = InpaintingStructure(value=structure_with_nan)
+    node = InpaintingStructureData(value=structure_with_nan)
 
     sites_attr = node.base.attributes.get("sites")
     assert sites_attr[0]["abc"][0] is None
@@ -101,7 +101,7 @@ def test_inpainting_structure_roundtrip_with_nan(
 
 
 def test_inpainting_structure_without_value(aiida_profile):
-    node = InpaintingStructure()
+    node = InpaintingStructureData()
     assert list(node.base.attributes.keys()) == []
 
 

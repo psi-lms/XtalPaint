@@ -2,7 +2,7 @@
 
 ## Development Setup
 
-This repository uses pre-commit hooks to ensure code quality and consistency. 
+This repository uses pre-commit hooks to ensure code quality and consistency.
 
 ### Setting up pre-commit
 
@@ -25,7 +25,7 @@ This repository uses pre-commit hooks to ensure code quality and consistency.
 
 The pre-commit configuration includes:
 - **Black**: Code formatting
-- **isort**: Import sorting 
+- **isort**: Import sorting
 - **flake8**: Linting and style checks
 - **pydocstyle**: Docstring style checking (numpy convention)
 - **Basic checks**: Trailing whitespace, end-of-file, YAML/TOML/JSON validation
