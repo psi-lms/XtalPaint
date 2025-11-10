@@ -1,29 +1,43 @@
+"""Module defining custom AiiDA datatypes for inpainting of structures."""
+
 import numpy as np
-from aiida.orm import Data
+from aiida.orm import Data, StructureData, QueryBuilder, ProcessNode
+from aiida_pythonjob import pyfunction
+
 from pymatgen.core import Structure
 import ase
 import ase.io
 from pymatgen.io.ase import AseAtomsAdaptor
 import io
+from disk_objectstore.utils import PackedObjectReader
+from dbcsi_inpainting.data import BatchedStructures
 
 
 __all__ = (
-    "InpaintingStructure",
-    "BatchedStructures",
+    "InpaintingStructureData",
     "BatchedStructuresData",
-    "InpaintingResults",
-    "InpaintingResultsData",
-    "convert_structure",
 )
 
 
-class InpaintingStructure(Data):
-    """AiiDA node to store a pymatgen Structure that may contain nan coordinates."""
+@pyfunction(
+    inputs=[{"name": "batched_structures"}, {"name": "keys"}],
+    outputs=[{"name": "structures", "identifier": "namespace"}],
+)
+def extract_from_batched_structures(
+    batched_structures: "BatchedStructuresData", keys: list[str]
+) -> dict[str, StructureData]:
+    outputs = {}
+    for key in keys:
+        atoms = batched_structures.get_structure(key)
+        outputs[key] = StructureData(ase=atoms)
+    return {"structures": outputs}
+
+
+class InpaintingStructureData(Data):
+    """AiiDA node to store a pymatgen Structure containing nan coordinates."""
 
     def __init__(self, value=None, **kwargs):
-        """
-        :param structure: pymatgen Structure instance to initialize from
-        """
+        """Initialize the InpaintingStructureData with a Structure."""
         structure = value
         super().__init__(**kwargs)
 
@@ -38,7 +52,7 @@ class InpaintingStructure(Data):
 
     @staticmethod
     def _replace_nan_to_str_coords(obj):
-        """Convert only site coordinate NaNs to the string 'nan' for JSON serialization."""
+        """Convert site coordinate NaNs to the string 'nan' for JSON format."""
         for site in obj.get("sites", []):
             for key in ("abc", "xyz"):
                 site[key] = [
@@ -59,8 +73,8 @@ class InpaintingStructure(Data):
         return obj
 
     @property
-    def value(self):
-        """Return the stored Structure, converting 'nan' strings back to np.nan"""
+    def value(self) -> Structure:
+        """Return the structure, converting 'nan' strings back to np.nan."""
         keys = self.base.attributes.get("keys")
         values = self.base.attributes.get_many(keys)
         data = dict(zip(keys, values))
@@ -68,108 +82,53 @@ class InpaintingStructure(Data):
         return Structure.from_dict(data)
 
     @property
-    def structure(self):
+    def structure(self) -> Structure:
         """Alias for value property to maintain compatibility with pymatgen."""
         return self.value
 
 
-def convert_structure(
-    structure: ase.Atoms | Structure, strct_type: str = "ase"
-) -> ase.Atoms | Structure:
-    """Convert a structure to the specified type."""
-    if strct_type not in ["ase", "pymatgen"]:
-        raise ValueError(
-            f"Unknown structure type: {strct_type}. Available types are 'ase' and 'pymatgen'."
-        )
-
-    if strct_type == "ase":
-        if isinstance(structure, ase.Atoms):
-            return structure
-        elif isinstance(structure, Structure):
-            return AseAtomsAdaptor.get_atoms(structure)
-    elif strct_type == "pymatgen":
-        if isinstance(structure, Structure):
-            return structure
-        elif isinstance(structure, ase.Atoms):
-            return AseAtomsAdaptor.get_structure(structure)
-
-
-class BatchedStructures:
-    def __init__(self, structures: dict):
-        """Initialize the BatchedStructures with structures."""
-        if not all([isinstance(key, str) for key in structures.keys()]):
-            raise ValueError("All keys in structures must be strings.")
-        self._keys = tuple(structures.keys())
-
-        self._structures = structures
-
-    @property
-    def keys(self):
-        """Return the keys of the structures."""
-        return self._keys
-
-    @property
-    def structures(self):
-        """Return the original structures."""
-        return self._structures
-
-    def get_structure(
-        self, key: str, strct_type: str = "ase"
-    ) -> ase.Atoms | Structure:
-        """Return a single structure by key."""
-        if key not in self.keys:
-            raise ValueError(
-                f"Key '{key}' not found in the available structures."
-            )
-
-        return convert_structure(self.structures[key], strct_type=strct_type)
-
-    def get_structures(
-        self, strct_type: str = "ase"
-    ) -> dict[str, ase.Atoms | Structure]:
-        """Return all structures as a dictionary."""
-        return {
-            key: convert_structure(self.structures[key], strct_type=strct_type)
-            for key in self.keys
-        }
-
-
 class BatchedStructuresData(Data):
-    def __init__(self, structures: dict, **kwargs):
+    """AiiDA node to store multiple structures in a batched format."""
+
+    def __init__(self, value=None, **kwargs):
         """Initialize the BatchedStructuresData with structures."""
+        structures = value or {}
         super().__init__(**kwargs)
+        if isinstance(structures, BatchedStructures):
+            structures = structures.structures
 
         self.base.attributes.set("keys", list(structures.keys()).copy())
         self.base.attributes.set("filename", "structures.extxyz")
 
         ase_structures = self.structures_to_atoms(structures)
 
-        self.structures_to_file(ase_structures, "structures")
+        self._structures_to_file(ase_structures, "structures")
 
-    @property
     def keys(self):
         """Return the keys of the structures."""
         return self.base.attributes.get("keys")
 
     @property
-    def file_name(self):
+    def file_name(self) -> str:
         """Return the name of the file where structures are stored."""
         return self.base.attributes.get("filename")
 
     @property
-    def value(self):
+    def value(self) -> BatchedStructures:
         """Return the stored structures as a dictionary."""
         return BatchedStructures(self.get_structures(strct_type="pymatgen"))
 
     @classmethod
-    def from_batched_structures(cls, batched_structures: BatchedStructures):
+    def from_batched_structures(
+        cls, batched_structures: BatchedStructures
+    ) -> "BatchedStructuresData":
         """Convert BatchedStructures to AiiDA data."""
-        return cls(structures=batched_structures.structures)
+        return cls(value=batched_structures.structures)
 
     def structures_to_atoms(self, structures) -> list:
         """Convert structures to ASE Atoms objects."""
         ase_atoms = []
-        for key in self.keys:
+        for key in self.keys():
             ase_atom = structures[key]
             if isinstance(ase_atom, Structure):
                 ase_atom = AseAtomsAdaptor.get_atoms(ase_atom)
@@ -178,14 +137,16 @@ class BatchedStructuresData(Data):
 
         return ase_atoms
 
-    def structures_to_file(self, structures, name) -> None:
+    def _structures_to_file(self, structures, name) -> None:
         import tempfile
 
-        # Write the array to a temporary file, and then add it to the repository of the node
+        # Write the array to a temporary file, and then add it to the
+        # repository of the node
         with tempfile.NamedTemporaryFile(mode="w+", suffix="extxyz") as handle:
             ase.io.write(handle, structures, format="extxyz")
 
-            # Flush and rewind the handle, otherwise the command to store it in the repo will write an empty file
+            # Flush and rewind the handle, otherwise the command to store it
+            # in the repo will write an empty file
             handle.flush()
             handle.seek(0)
 
@@ -193,267 +154,140 @@ class BatchedStructuresData(Data):
                 handle, f"{name}.extxyz"
             )
 
-    def get_structure(
-        self, key: str, strct_type: str = "ase"
-    ) -> ase.Atoms | Structure:
-        """Return a single structure by key."""
+    def _get_structures_from_file(self, keys=None) -> list[ase.Atoms]:
+        """Read the stored structures from file."""
+        all_keys = self.keys()
+
         if self.file_name not in self.base.repository.list_object_names():
             raise ValueError("No structures found in the repository.")
-        if key not in self.keys:
+        if keys is not None and not isinstance(keys, (str, list)):
+            raise ValueError("Keys must be a string or a list of strings.")
+        elif isinstance(keys, list) and not set(keys).issubset(all_keys):
             raise ValueError(
-                f"Key '{key}' not found in the available structures."
+                f"Keys `{[k for k in keys if k not in all_keys]}` not found "
+                "in the available structures."
             )
+
+        indices = [":"] if keys is None else [all_keys.index(k) for k in keys]
 
         with self.base.repository.open(self.file_name, mode="rb") as handle:
-            structure = ase.io.read(
-                io.TextIOWrapper(handle),
-                index=self.keys.index(key),
-                format="extxyz",
+            wrapped_handle = (
+                io.TextIOWrapper(io.BytesIO(handle.read()))
+                if isinstance(handle, PackedObjectReader)
+                else io.TextIOWrapper(handle)
             )
 
-        if strct_type == "ase":
-            return structure
-        elif strct_type == "pymatgen":
-            return AseAtomsAdaptor.get_structure(structure)
-        else:
-            raise ValueError(
-                f"Unknown structure type: {strct_type}. Available types are 'ase' and 'pymatgen'."
-            )
+            all_ase_structures = []
+            for index in indices:
+                if isinstance(handle, PackedObjectReader):
+                    # If the handle is a PackedObjectReader, read the content
+                    # as bytes
+                    ase_structures = ase.io.read(
+                        wrapped_handle,
+                        index=f"{index}",
+                        format="extxyz",
+                    )
+                else:
+                    ase_structures = ase.io.read(
+                        wrapped_handle, index=f"{index}", format="extxyz"
+                    )
+
+                if isinstance(ase_structures, ase.Atoms):
+                    ase_structures = [ase_structures]
+                all_ase_structures.extend(ase_structures)
+
+        return all_ase_structures
 
     def get_structures(
-        self, strct_type: str = "ase"
-    ) -> dict[str, ase.Atoms | Structure]:
-        """Return all structures as a dictionary."""
-        if self.file_name not in self.base.repository.list_object_names():
-            raise ValueError("No structures found in the repository.")
+        self,
+        keys: str | list[str] | None = None,
+        strct_type: str = "ase",
+        use_existing_aiida_nodes: bool = True,
+    ) -> dict[str, ase.Atoms | Structure | StructureData]:
+        """Return a single structure by key.
 
-        with self.base.repository.open(self.file_name, mode="rb") as handle:
-            ase_structures = ase.io.read(
-                io.TextIOWrapper(handle), index=":", format="extxyz"
+        key: If None, return all structures as a list. If provided,
+            return the structure(s) corresponding to the key(s).
+        strct_type: 'ase', 'pymatgen', or 'aiida' (returns StructureData node).
+        """
+        if keys is not None and not isinstance(keys, (str, list)):
+            raise ValueError(
+                "Keys must be a string, list of strings, or `None`."
             )
+        if isinstance(keys, str):
+            keys = [keys]
+
+        structures = self._get_structures_from_file(keys=keys)
+
+        if keys is None:
+            keys = self.keys()
 
         if strct_type == "ase":
             return {
-                str(ase_atom.info["key"]): ase_atom
-                for ase_atom in ase_structures
+                str(ase_atom.info["key"]): ase_atom for ase_atom in structures
             }
         elif strct_type == "pymatgen":
             return {
                 str(ase_atom.info["key"]): AseAtomsAdaptor.get_structure(
                     ase_atom
                 )
-                for ase_atom in ase_structures
+                for ase_atom in structures
             }
-        else:
-            raise ValueError(
-                f"Unknown structure type: {strct_type}. Available types are 'ase' and 'pymatgen'."
+        elif strct_type == "aiida":
+            edge_labels_to_filter = [f"structures__{k}" for k in keys]
+
+            # Check if StructureData node for this structure already exists as
+            # a child of this node
+            qb = QueryBuilder()
+            qb.append(type(self), filters={"uuid": self.uuid}, tag="parent")
+            qb.append(
+                ProcessNode,
+                filters={
+                    "attributes.process_label": (
+                        "extract_from_batched_structures"
+                    )
+                },
+                with_incoming="parent",
+                tag="process",
             )
+            qb.append(
+                StructureData,
+                with_incoming="process",
+                edge_filters={"label": {"in": edge_labels_to_filter}},
+                project="*",
+                edge_project="label",
+            )
+            result = qb.all(flat=False)
 
-
-class InpaintingResults:
-    def __init__(self, structures: dict, relaxed_structures: dict = None):
-        """Initialize the BatchedStructures with structures and optional relaxed structures."""
-
-        if relaxed_structures:
-            if set(structures.keys()) != set(relaxed_structures.keys()):
+            if len(result) > len(edge_labels_to_filter):
                 raise ValueError(
-                    "Keys of structures and relaxed_structures must match."
+                    "Warning: More StructureData nodes found than requested!"
                 )
 
-        if not all([isinstance(key, str) for key in structures.keys()]):
-            raise ValueError("All keys in structures must be strings.")
-        self._keys = tuple(structures.keys())
+            missing_keys = set(keys)
+            existing_aiida_structures = {}
+            if result is not None and use_existing_aiida_nodes:
+                print("Reusing existing StructureData nodes.")
 
-        self._structures = structures
-        self._relaxed_structures = (
-            relaxed_structures if relaxed_structures else {}
-        )
+                existing_aiida_structures = {
+                    edge_label.split("__")[-1]: struct
+                    for struct, edge_label in result
+                }
 
-    @property
-    def keys(self):
-        """Return the keys of the structures."""
-        return self._keys
+                if set(existing_aiida_structures.keys()) == set(keys):
+                    return existing_aiida_structures
 
-    @property
-    def structures(self):
-        """Return the original structures."""
-        return self._structures
+                missing_keys -= set(existing_aiida_structures.keys())
 
-    @property
-    def relaxed_structures(self):
-        """Return the relaxed structures."""
-        return self._relaxed_structures
+            result = extract_from_batched_structures(self, list(missing_keys))
 
-    def get_structure(
-        self, key: str, relaxed: bool = False, strct_type: str = "ase"
-    ) -> ase.Atoms | Structure:
-        """Return a single structure by key."""
-        if key not in self.keys:
-            raise ValueError(
-                f"Key '{key}' not found in the available structures."
-            )
-        if relaxed:
-            if not self.relaxed_structures:
-                raise ValueError("No relaxed structures available.")
-            return convert_structure(
-                self.relaxed_structures[key], strct_type=strct_type
-            )
-        else:
-            return convert_structure(
-                self.structures[key], strct_type=strct_type
-            )
-
-    def get_structures(
-        self, relaxed: bool = False, strct_type: str = "ase"
-    ) -> dict[str, ase.Atoms | Structure]:
-        """Return all structures as a dictionary."""
-        if relaxed:
-            if not self.relaxed_structures:
-                raise ValueError("No relaxed structures available.")
-            return {
-                key: convert_structure(
-                    self.relaxed_structures[key], strct_type=strct_type
-                )
-                for key in self.keys
+            aiida_structures = {
+                **existing_aiida_structures,
+                **result["structures"],
             }
-        else:
-            return {
-                key: convert_structure(
-                    self.structures[key], strct_type=strct_type
-                )
-                for key in self.keys
-            }
-
-
-class InpaintingResultsData(Data):
-    def __init__(
-        self, structures: dict, relaxed_structures: dict = None, **kwargs
-    ):
-        """Initialize the InpaintingResultsData with structures and optional relaxed structures."""
-        super().__init__(**kwargs)
-
-        if relaxed_structures is not None:
-            if set(structures.keys()) != set(relaxed_structures.keys()):
-                raise ValueError(
-                    "Keys of structures and relaxed_structures must match."
-                )
-
-        self.base.attributes.set("keys", list(structures.keys()).copy())
-
-        ase_structures = self.structures_to_atoms(structures)
-
-        self.structures_to_file(ase_structures, "structures")
-
-        if relaxed_structures is not None:
-            ase_relaxed_structures = self.structures_to_atoms(
-                relaxed_structures
-            )
-            self.structures_to_file(
-                ase_relaxed_structures, "relaxed_structures"
-            )
-
-    @property
-    def keys(self):
-        """Return the keys of the structures."""
-        return self.base.attributes.get("keys")
-
-    @classmethod
-    def from_inpainting_results(cls, inpainting_results: InpaintingResults):
-        """Convert inpainting results to AiiDA data."""
-        return cls(
-            structures=inpainting_results.structures,
-            relaxed_structures=inpainting_results.relaxed_structures,
-        )
-
-    def structures_to_atoms(self, structures) -> list:
-        """Convert structures to ASE Atoms objects."""
-        ase_atoms = []
-        for key in self.keys:
-            ase_atom = structures[key]
-            if isinstance(ase_atom, Structure):
-                ase_atom = AseAtomsAdaptor.get_atoms(ase_atom)
-            ase_atom.info["key"] = key
-            ase_atoms.append(ase_atom)
-
-        return ase_atoms
-
-    def structures_to_file(self, structures, name) -> None:
-        import tempfile
-
-        # Write the array to a temporary file, and then add it to the repository of the node
-        with tempfile.NamedTemporaryFile(mode="w+", suffix="extxyz") as handle:
-            ase.io.write(handle, structures, format="extxyz")
-
-            # Flush and rewind the handle, otherwise the command to store it in the repo will write an empty file
-            handle.flush()
-            handle.seek(0)
-
-            self.base.repository.put_object_from_filelike(
-                handle, f"{name}.extxyz"
-            )
-
-    def get_structure(
-        self, key: str, relaxed: bool = False, strct_type: str = "ase"
-    ) -> ase.Atoms | Structure:
-        """Return a single structure by key."""
-        file_name = (
-            "relaxed_structures.extxyz" if relaxed else "structures.extxyz"
-        )
-        if file_name not in self.base.repository.list_object_names():
-            raise ValueError(
-                f"No {'relaxed ' if relaxed else ''}structures found in the repository."
-            )
-        if key not in self.keys:
-            raise ValueError(
-                f"Key '{key}' not found in the available structures."
-            )
-
-        with self.base.repository.open(file_name, mode="rb") as handle:
-            structure = ase.io.read(
-                io.TextIOWrapper(handle),
-                index=self.keys.index(key),
-                format="extxyz",
-            )
-
-        if strct_type == "ase":
-            return structure
-        elif strct_type == "pymatgen":
-            return AseAtomsAdaptor.get_structure(structure)
+            return aiida_structures
         else:
             raise ValueError(
-                f"Unknown structure type: {strct_type}. Available types are 'ase' and 'pymatgen'."
-            )
-
-    def get_structures(
-        self, relaxed: bool = False, strct_type: str = "ase"
-    ) -> dict[str, ase.Atoms | Structure]:
-        """Return all structures as a dictionary."""
-        file_name = (
-            "relaxed_structures.extxyz" if relaxed else "structures.extxyz"
-        )
-        if file_name not in self.base.repository.list_object_names():
-            raise ValueError(
-                f"No {'relaxed ' if relaxed else ''}structures found in the repository."
-            )
-
-        with self.base.repository.open(file_name, mode="rb") as handle:
-            ase_structures = ase.io.read(
-                io.TextIOWrapper(handle), index=":", format="extxyz"
-            )
-
-        if strct_type == "ase":
-            return {
-                str(ase_atom.info["key"]): ase_atom
-                for ase_atom in ase_structures
-            }
-        elif strct_type == "pymatgen":
-            return {
-                str(ase_atom.info["key"]): AseAtomsAdaptor.get_structure(
-                    ase_atom
-                )
-                for ase_atom in ase_structures
-            }
-        else:
-            raise ValueError(
-                f"Unknown structure type: {strct_type}. Available types are 'ase' and 'pymatgen'."
+                f"Unknown structure type: {strct_type}. Available types are "
+                "'ase', 'pymatgen', and 'aiida'."
             )
