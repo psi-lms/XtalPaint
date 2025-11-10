@@ -3,12 +3,12 @@
 from aiida import orm
 from aiida_workgraph import WorkGraph, task
 
-from dbcsi_inpainting.aiida.config_schema import InpaintingWorkGraphConfig
 from dbcsi_inpainting.aiida.data import (
     BatchedStructures,
     BatchedStructuresData,
 )
-from dbcsi_inpainting.aiida.tasks import _evaluate_inpainting_task
+from dbcsi_inpainting.aiida.tasks.tasks import _evaluate_inpainting_task
+from dbcsi_inpainting.inpainting.config_schema import InpaintingWorkGraphConfig
 
 
 @task.graph_builder

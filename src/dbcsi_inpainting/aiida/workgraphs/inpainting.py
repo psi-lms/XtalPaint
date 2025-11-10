@@ -1,22 +1,22 @@
 """AiiDA WorkGraph for inpainting of crystal structures."""
 
+from copy import deepcopy
+
 from aiida import orm
 from aiida_workgraph import WorkGraph
-from dbcsi_inpainting.aiida.data import (
-    BatchedStructuresData,
-    BatchedStructures,
-)
 from pymatgen.core.structure import Structure
 
-
-from copy import deepcopy
-from dbcsi_inpainting.aiida.config_schema import InpaintingWorkGraphConfig
-from dbcsi_inpainting.aiida.tasks.tasks import (
-    _relaxation_task,
-    _aiida_generate_inpainting_candidates,
-    _inpainting_pipeline_task,
-    _evaluate_inpainting_task,
+from dbcsi_inpainting.aiida.data import (
+    BatchedStructures,
+    BatchedStructuresData,
 )
+from dbcsi_inpainting.aiida.tasks.tasks import (
+    _aiida_generate_inpainting_candidates,
+    _evaluate_inpainting_task,
+    _inpainting_pipeline_task,
+    _relaxation_task,
+)
+from dbcsi_inpainting.inpainting.config_schema import InpaintingWorkGraphConfig
 
 
 def get_inpainting_wg(
@@ -84,8 +84,8 @@ def get_inpainting_wg(
                     inputs.inpainting_pipeline_options or inputs.options
                 ),
             },
-            # ToDo: These serializers/deserializers can probably be removed as they
-            # are also registered as entry-points
+            # ToDo: These serializers/deserializers can probably be
+            # removed as they are also registered as entry-points
             deserializers={
                 "aiida.orm.nodes.data.structure.StructureData": (
                     "aiida_pythonjob.data.deserializer.structure_data_to_pymatgen"
@@ -276,7 +276,8 @@ def _add_full_relax_task(
 
         wg.outputs = outputs
         # ToDo: Wait for aiida-workgraph release to
-        # ToDo: Update: It's released, just have to update the repo to the new version
+        # ToDo: Update: It's released, just have to update the repo
+        # ToDo: to the new version
         # support __setitem__ for outputs
         # It's already released now, just have to update the general WorkGraphs
         # then
