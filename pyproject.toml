@@ -44,19 +44,6 @@ line-length = 79
 target-version = "py310"
 src = ["src"]
 
-[tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "D",   # pydocstyle
-]
-ignore = [
-    "E203",  # whitespace before ':'
-    "W503",  # line break before binary operator
-]
-
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
