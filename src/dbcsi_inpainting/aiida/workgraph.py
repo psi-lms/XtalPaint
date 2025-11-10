@@ -1,20 +1,23 @@
 """AiiDA WorkGraph for inpainting of crystal structures."""
 
+from copy import deepcopy
+
 from aiida import orm
-from dbcsi_inpainting.aiida.inpainting_process import run_inpainting_pipeline
-from dbcsi_inpainting.aiida.generate_candidates import (
-    _aiida_generate_inpainting_candidates,
-)
 from aiida_workgraph import WorkGraph, task
-from dbcsi_inpainting.aiida.data import (
-    BatchedStructuresData,
-    BatchedStructures,
-)
 from pymatgen.core.structure import Structure
 
-from dbcsi_inpainting.utils.relaxation_utils import relax_structures
-from copy import deepcopy
 from dbcsi_inpainting.aiida.config_schema import InpaintingWorkGraphConfig
+from dbcsi_inpainting.aiida.data import (
+    BatchedStructures,
+    BatchedStructuresData,
+)
+from dbcsi_inpainting.inpainting.generate_candidates import (
+    _aiida_generate_inpainting_candidates,
+)
+from dbcsi_inpainting.inpainting.inpainting_process import (
+    run_inpainting_pipeline,
+)
+from dbcsi_inpainting.utils.relaxation_utils import relax_structures
 
 _run_inpainting_pipeline_task = task(
     inputs=[
@@ -208,12 +211,12 @@ def _add_full_relax_task(
         wg.outputs = outputs
         # ToDo: Wait for aiida-workgraph release to
         # support __setitem__ for outputs
-        # # wg.outputs[f"{task_name}.structures"] = wg.tasks[task_name].outputs[
-        # #     "structures"
-        # # ]
-        # # wg.outputs[f"{task_name}.energies"] = wg.tasks[task_name].outputs[
-        # #     "energies"
-        # # ]
+        # wg.outputs[f"{task_name}.structures"] = wg.tasks[task_name].outputs[
+        #     "structures"
+        # ]
+        # wg.outputs[f"{task_name}.energies"] = wg.tasks[task_name].outputs[
+        #     "energies"
+        # ]
 
     return wg
 

@@ -4,16 +4,18 @@ This module defines Pydantic BaseModel classes and validators for
 inpainting workflows, pipelines, and their configuration parameters.
 """
 
-from pydantic import BaseModel, Field, model_validator, field_validator
 from typing import Optional
+
+from aiida import orm
+from ase import Atoms
+from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic.config import ConfigDict
+from pymatgen.core import Structure
+
 from dbcsi_inpainting.aiida.data import (
     BatchedStructures,
     InpaintingStructure,
 )
-from aiida import orm
-from ase import Atoms
-from pymatgen.core import Structure
-from pydantic.config import ConfigDict
 
 
 class RelaxParameters(BaseModel):
@@ -82,7 +84,7 @@ class InpaintingPipelineParams(BaseModel):
     @classmethod
     def validate_predictor_corrector(cls, v):
         """Validator to ensure 'predictor_corrector' is a supported key."""
-        from dbcsi_inpainting.aiida.inpainting_process import (
+        from dbcsi_inpainting.inpainting.inpainting_process import (
             GUIDED_PREDICTOR_CORRECTOR_MAPPING,
         )
 
