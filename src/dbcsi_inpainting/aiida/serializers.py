@@ -2,6 +2,7 @@ from aiida import orm
 from dbcsi_inpainting.aiida.data import (
     BatchedStructures,
     BatchedStructuresData,
+    PandasDataFrameData,
 )
 
 
@@ -28,3 +29,8 @@ def batched_structures_to_batched_structures_data(
 ) -> BatchedStructuresData:
     """Convert BatchedStructures to BatchedStructuresData."""
     return BatchedStructuresData.from_batched_structures(batched_structures)
+
+
+def pandas_dataframe_to_pandas_dataframe_data(df: "pd.DataFrame") -> orm.Data:
+    """Convert a pandas DataFrame to a custom AiiDA Data node."""
+    return PandasDataFrameData(value=df)
