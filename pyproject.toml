@@ -19,8 +19,11 @@ dependencies = [
 ]
 
 [project.entry-points."aiida.data"]
-"dbcsi_inpainting.InpaintingStructure" = "dbcsi_inpainting.aiida.data:InpaintingStructure"
+"pythonjob.dbcsi_inpainting.aiida.data.InpaintingStructure" = "dbcsi_inpainting.aiida.data:InpaintingStructure"
 "dbcsi_inpainting.BatchedStructuresData" = "dbcsi_inpainting.aiida.data:BatchedStructuresData"
+"dbcsi_inpainting.PandasDataFrameData" = "dbcsi_inpainting.aiida.data:PandasDataFrameData"
+"pythonjob.dbcsi_inpainting.aiida.data.BatchedStructures" = "dbcsi_inpainting.aiida.data:BatchedStructuresData"
+"pythonjob.pandas.core.frame.DataFrame" = "dbcsi_inpainting.aiida.data:PandasDataFrameData"
 
 [project.optional-dependencies]
 dev = [
