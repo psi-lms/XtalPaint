@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from mattergen.diffusion.sampling.pc_sampler import (
-    PredictorCorrector,
     _mask_replace,
 )
 
@@ -26,7 +25,6 @@ SampleAndMeanAndMaybeRecords = Tuple[
 
 
 class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
-
     @torch.no_grad()
     def _denoise(
         self,
@@ -135,7 +133,6 @@ class CustomGuidedPredictorCorrector(GuidedPredictorCorrector):
 
 
 class GuidedPredictorCorrectorRevertedOrder(GuidedPredictorCorrector):
-
     @torch.no_grad()
     def _denoise(
         self,
@@ -221,7 +218,6 @@ class GuidedPredictorCorrectorRevertedOrder(GuidedPredictorCorrector):
 
 
 class CustomGuidedPredictorCorrectorRePaint(GuidedPredictorCorrector):
-
     def __init__(self, **kwargs):
         self.n_resample_steps = kwargs.pop("n_resample_steps", 1)
 
@@ -364,7 +360,6 @@ class CustomGuidedPredictorCorrectorRePaint(GuidedPredictorCorrector):
 
 
 def time_jump_scheduler(t_T=250, jump_len=10, jump_n_sample=10):
-
     jumps = {}
     for j in range(0, t_T - jump_len, jump_n_sample - 1):
         jumps[j] = jump_n_sample - 1
@@ -389,7 +384,6 @@ def time_jump_scheduler(t_T=250, jump_len=10, jump_n_sample=10):
 
 
 class CustomGuidedPredictorCorrectorRePaintV2(GuidedPredictorCorrector):
-
     def __init__(self, **kwargs):
         self.n_resample_steps = kwargs.pop("n_resample_steps", 1)
         self.jump_length = kwargs.pop("jump_length", 10)
@@ -588,7 +582,6 @@ class CustomGuidedPredictorCorrectorRePaintV2(GuidedPredictorCorrector):
 
 
 class CustomGuidedPredictorCorrectorNewTimesteps(GuidedPredictorCorrector):
-
     @torch.no_grad()
     def _denoise(
         self,

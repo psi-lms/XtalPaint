@@ -27,8 +27,10 @@ repos:
         language: system
         types: [python]
         args: [--fix]
+        files: ^src/
       - id: ruff-format
         name: ruff format
         entry: ruff format
         language: system
         types: [python]
+        files: ^src/

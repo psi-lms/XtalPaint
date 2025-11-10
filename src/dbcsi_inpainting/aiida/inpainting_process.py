@@ -1,19 +1,11 @@
-import os
-from pathlib import Path
-import itertools
 from typing import Any, Dict, List, Tuple
 from torch.utils.data import DataLoader
 from pymatgen.core import Structure
 from dbcsi_inpainting.generate_inpainting import (
     generate_reconstructed_structures,
 )
-from mattergen.common.utils.eval_utils import save_structures
-from dbcsi_inpainting.evaluation import (
-    evaluate_results,
-)
 from dbcsi_inpainting.aiida.config_schema import InpaintingPipelineParams
 import numpy as np
-from pymatgen.core import Structure
 from dbcsi_inpainting.utils.data_utils import create_dataloader
 
 from dbcsi_inpainting.aiida.data import BatchedStructures, InpaintingStructure
@@ -22,8 +14,6 @@ from mattergen.common.data.transform import (
     symmetrize_lattice,
     set_chemical_system_string,
 )
-from dbcsi_inpainting.aiida.config_schema import InpaintingPipelineParams
-from ase import Atoms
 
 
 DBSCI_INPAINTING_BASE = "dbcsi_inpainting.custom_predictor_corrector"
@@ -44,10 +34,10 @@ def _get_overrides(
     pretrained_name=None,
 ) -> Tuple[List[str], List[str]]:
     sampling_config_overrides = [
-        f'sampler_partial.N={inpainting_model_params["N_steps"]}',
-        f'sampler_partial.n_steps_corrector={inpainting_model_params["n_corrector_steps"]}',
-        f"~sampler_partial.predictor_partials.atomic_numbers",
-        f'sampler_partial.corrector_partials.pos.snr={inpainting_model_params["coordinates_snr"]}',
+        f"sampler_partial.N={inpainting_model_params['N_steps']}",
+        f"sampler_partial.n_steps_corrector={inpainting_model_params['n_corrector_steps']}",
+        "~sampler_partial.predictor_partials.atomic_numbers",
+        f"sampler_partial.corrector_partials.pos.snr={inpainting_model_params['coordinates_snr']}",
         f"sampler_partial._target_={GUIDED_PREDICTOR_CORRECTOR_MAPPING[predictor_corrector]}",
     ]
     if predictor_corrector == "TD":
@@ -58,7 +48,7 @@ def _get_overrides(
     if pretrained_name is not None:
         config_overrides = [
             "lightning_module.diffusion_module.corruption.discrete_corruptions.atomic_numbers.d3pm.schedule.num_steps="
-            + f'{inpainting_model_params["N_steps"]}',
+            + f"{inpainting_model_params['N_steps']}",
         ]
 
     if fix_cell:
@@ -75,11 +65,11 @@ def _get_overrides(
 
     if "n_resample_steps" in inpainting_model_params:
         sampling_config_overrides.append(
-            f'+sampler_partial.n_resample_steps={inpainting_model_params["n_resample_steps"]}'
+            f"+sampler_partial.n_resample_steps={inpainting_model_params['n_resample_steps']}"
         )
     if "jump_length" in inpainting_model_params:
         sampling_config_overrides.append(
-            f'+sampler_partial.jump_length={inpainting_model_params["jump_length"]}'
+            f"+sampler_partial.jump_length={inpainting_model_params['jump_length']}"
         )
 
     return sampling_config_overrides, config_overrides

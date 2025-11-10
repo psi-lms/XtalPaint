@@ -85,7 +85,6 @@ def structure_to_inpainting_candidates(
     element: str,
     num_samples: int = 1,
 ) -> List[Structure]:
-
     if (
         isinstance(num_inpaint_sites, tuple)
         and not len(num_inpaint_sites) == 2
@@ -173,7 +172,6 @@ def _aiida_generate_inpainting_candidates(
     element: Union[str, List[str]],
     num_samples: int = 1,
 ) -> BatchedStructures:
-
     candidates = generate_inpainting_candidates(
         structures=structures,
         n_inp=n_inp,

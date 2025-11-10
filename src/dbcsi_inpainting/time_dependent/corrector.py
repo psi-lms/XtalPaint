@@ -15,7 +15,6 @@ SampleAndMean = tuple[torch.Tensor, torch.Tensor]
 
 
 class TDLangevinCorrector(LangevinCorrector):
-
     def step_given_score(
         self,
         *,
@@ -26,7 +25,6 @@ class TDLangevinCorrector(LangevinCorrector):
         dt: torch.Tensor,
         mask: torch.LongTensor | None = None,
     ) -> SampleAndMean:
-
         if mask is None:
             mask = torch.zeros(x.shape[0])
         mask_bool = ~mask.bool()
