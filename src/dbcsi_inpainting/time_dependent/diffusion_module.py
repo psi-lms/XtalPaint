@@ -12,7 +12,6 @@ def identity(x: T) -> T:
 
 
 class TDDiffusionModule(DiffusionModule):
-
     def __init__(
         self,
         t_replace: float = 0.005,

@@ -100,8 +100,7 @@ def get_inpainting_wg(
         },
         serializers={
             "pymatgen.core.structure.Structure": (
-                "dbcsi_inpainting.aiida.serializers."
-                "pymatgen_to_structure_data"
+                "dbcsi_inpainting.aiida.serializers.pymatgen_to_structure_data"
             ),
             "dbcsi_inpainting.aiida.data.BatchedStructures": (
                 "dbcsi_inpainting.aiida.serializers."
@@ -185,14 +184,12 @@ def _add_full_relax_task(
         },
         deserializers={
             "aiida.orm.nodes.data.structure.StructureData": (
-                "aiida_pythonjob.data.deserializer."
-                "structure_data_to_pymatgen"
+                "aiida_pythonjob.data.deserializer.structure_data_to_pymatgen"
             ),
         },
         serializers={
             "pymatgen.core.structure.Structure": (
-                "dbcsi_inpainting.aiida.serializers."
-                "pymatgen_to_structure_data"
+                "dbcsi_inpainting.aiida.serializers.pymatgen_to_structure_data"
             ),
             "dbcsi_inpainting.aiida.data.BatchedStructures": (
                 "dbcsi_inpainting.aiida.serializers."

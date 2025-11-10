@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Callable, Sequence
-from pymatgen.core import Structure, Composition
+from pymatgen.core import Structure
 import torch
 import json
 
@@ -11,7 +11,6 @@ from mattergen.diffusion.data.batched_data import BatchedData
 from dbcsi_inpainting.utils.relaxation_utils import relax_structures
 from mattergen.common.utils.globals import get_device
 from mattergen.common.data.chemgraph import ChemGraph
-from mattergen.common.utils.globals import get_device
 
 
 def _collate_fn_w_mask(

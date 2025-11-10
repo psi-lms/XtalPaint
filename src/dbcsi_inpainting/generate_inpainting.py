@@ -1,5 +1,4 @@
 from torch.utils.data import DataLoader
-import torch
 from pymatgen.core.structure import Structure
 from typing import Literal
 from pathlib import Path
@@ -8,7 +7,6 @@ from omegaconf import OmegaConf
 from pymatgen.core.trajectory import Trajectory
 
 
-from mattergen.common.data.types import TargetProperty
 from mattergen.common.data.types import TargetProperty
 from mattergen.common.utils.data_classes import (
     MatterGenCheckpointInfo,
@@ -21,24 +19,14 @@ from mattergen.generator import (
     structures_from_trajectory,
 )
 
-from pathlib import Path
 
-import torch
-from hydra.utils import instantiate
-from omegaconf import DictConfig, OmegaConf
-from pymatgen.core.structure import Structure
 from tqdm import tqdm
 
 from mattergen.common.data.chemgraph import ChemGraph
 from mattergen.common.data.collate import collate
 from mattergen.common.data.condition_factory import ConditionLoader
 
-from mattergen.common.data.types import TargetProperty
 from mattergen.common.utils.data_utils import lattice_matrix_to_params_torch
-from mattergen.common.utils.eval_utils import (
-    MatterGenCheckpointInfo,
-    save_structures,
-)
 
 from mattergen.diffusion.sampling.pc_sampler import PredictorCorrector
 
@@ -50,19 +38,23 @@ def draw_samples_from_sampler(
     record_trajectories: bool = True,
     fix_cell: bool = True,
 ) -> list[Structure]:
-
     # Dict
     properties_to_condition_on = properties_to_condition_on or {}
 
     # we cannot conditional sample on something on which the model was not trained to condition on
-    assert all([key in sampler.diffusion_module.model.cond_fields_model_was_trained_on for key in properties_to_condition_on.keys()])  # type: ignore
+    assert all(
+        [
+            key
+            in sampler.diffusion_module.model.cond_fields_model_was_trained_on
+            for key in properties_to_condition_on.keys()
+        ]
+    )  # type: ignore
 
     all_samples_list = []
     all_trajs_list = []
     for conditioning_data, mask in tqdm(
         condition_loader, desc="Generating samples"
     ):
-
         # generate samples
         if record_trajectories:
             # sample, mean, intermediate_samples = sampler.sample_with_record(conditioning_data, mask)
@@ -107,7 +99,6 @@ def draw_samples_from_sampler(
 
 
 class CrystalInpaintingGenerator(CrystalGenerator):
-
     dataloader: DataLoader
 
     def __init__(self, dataloader: DataLoader, *args, **kwargs):
@@ -205,12 +196,12 @@ def generate_reconstructed_structures(
 
     NOTE: When specifying dictionary values via the CLI, make sure there is no whitespace between the key and value, e.g., `--properties_to_condition_on={key1:value1}`.
     """
-    assert (
-        pretrained_name is not None or model_path is not None
-    ), "Either pretrained_name or model_path must be provided."
-    assert (
-        pretrained_name is None or model_path is None
-    ), "Only one of pretrained_name or model_path can be provided."
+    assert pretrained_name is not None or model_path is not None, (
+        "Either pretrained_name or model_path must be provided."
+    )
+    assert pretrained_name is None or model_path is None, (
+        "Only one of pretrained_name or model_path can be provided."
+    )
 
     sampling_config_overrides = sampling_config_overrides or []
     config_overrides = config_overrides or []

@@ -10,57 +10,43 @@ authors = [{ name = "Timo Reents", email = "timo.reents@psi.ch" }]
 license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
-
-# To-Do: add dependencies as needed
-
-[project.optional-dependencies]
-dev = [
-    "pre-commit",
-    "black",
-    "isort",
-    "flake8",
-    "pydocstyle",
+dependencies = [
+    "ase>=3.26.0",
+    "numpy>=1.26.4",
+    "pymatgen>=2025.10.7",
 ]
+
+
+
 
 
 [project.entry-points."aiida.data"]
 "dbcsi_inpainting.InpaintingStructure" = "dbcsi_inpainting.aiida.data:InpaintingStructure"
 "dbcsi_inpainting.BatchedStructuresData" = "dbcsi_inpainting.aiida.data:BatchedStructuresData"
 
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=4.4.0",
+    "pytest>=9.0.0",
+    "ruff>=0.14.4",
+]
+aiida = [
+    "aiida-workgraph==0.5.2",
+]
+
 [tool.setuptools]
 packages = ["dbcsi_inpainting"]
 package-dir = {"" = "src"}
 
-# Black configuration
-[tool.black]
+# Ruff configuration
+[tool.ruff]
 line-length = 79
-target-version = ['py310']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
+target-version = "py310"
+src = ["src"]
 
-# isort configuration
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 79
-known_first_party = ["dbcsi_inpainting"]
-known_third_party = ["numpy", "torch", "pymatgen", "mattergen"]
-src_paths = ["src"]
-
-# pydocstyle configuration
-[tool.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
-inherit = false
+
+[tool.ruff.lint.isort]
+known-first-party = ["dbcsi_inpainting"]
+known-third-party = ["numpy", "torch", "pymatgen", "mattergen"]

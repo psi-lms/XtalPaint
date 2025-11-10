@@ -49,9 +49,9 @@ def wrapped_normal_loss_td(
     if pred.ndim != 2:
         raise NotImplementedError
 
-    assert hasattr(
-        corruption, "wrapping_boundary"
-    ), "SDE must be a WrappedSDE, i.e., must have a wrapping boundary."
+    assert hasattr(corruption, "wrapping_boundary"), (
+        "SDE must be a WrappedSDE, i.e., must have a wrapping boundary."
+    )
     wrapping_boundary = corruption.wrapping_boundary
     # Scaled identity matrix, i.e., in each dimension we wrap at
     # `wrapping_boundary`.
