@@ -1,10 +1,10 @@
 from torch.utils.data import DataLoader
+from dbcsi_inpainting.aiida.data import BatchedStructures
 from pymatgen.core.structure import Structure
 from typing import Literal
 from pathlib import Path
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
-from pymatgen.core.trajectory import Trajectory
 
 
 from mattergen.common.data.types import TargetProperty
@@ -52,6 +52,7 @@ def draw_samples_from_sampler(
 
     all_samples_list = []
     all_trajs_list = []
+    all_mean_trajs_list = []
     for conditioning_data, mask in tqdm(
         condition_loader, desc="Generating samples"
     ):
@@ -62,6 +63,11 @@ def draw_samples_from_sampler(
             _out = sampler.sample_with_record(conditioning_data, mask)
             if len(_out) == 4:
                 sample, mean, intermediate_samples, intermediate_means = _out
+                all_mean_trajs_list.extend(
+                    list_of_time_steps_to_list_of_trajectories(
+                        intermediate_means
+                    )
+                )
             elif len(_out) == 3:
                 sample, mean, intermediate_samples = _out
             all_trajs_list.extend(
@@ -86,16 +92,25 @@ def draw_samples_from_sampler(
     )
 
     trajectories = []
+    mean_trajectories = []
     for ix, traj in enumerate(all_trajs_list):
-        strucs = structures_from_trajectory(traj)
-        trajectories.append(
-            Trajectory.from_structures(
-                strucs,
-                constant_lattice=fix_cell,
+        trajectory_as_dict = {
+            f"{strct_i}": strct
+            for strct_i, strct in enumerate(structures_from_trajectory(traj))
+        }
+        trajectories.append(BatchedStructures(trajectory_as_dict))
+        if all_mean_trajs_list:
+            mean_trajectory_as_dict = {
+                f"{strct_i}": strct
+                for strct_i, strct in enumerate(
+                    structures_from_trajectory(all_mean_trajs_list[ix])
+                )
+            }
+            mean_trajectories.append(
+                BatchedStructures(mean_trajectory_as_dict)
             )
-        )
 
-    return generated_strucs, trajectories
+    return generated_strucs, trajectories, mean_trajectories
 
 
 class CrystalInpaintingGenerator(CrystalGenerator):
