@@ -11,7 +11,9 @@ from pymatgen.io.ase import AseAtomsAdaptor
 import io
 from disk_objectstore.utils import PackedObjectReader
 from dbcsi_inpainting.data import BatchedStructures
-
+import tempfile
+import pandas as pd
+from aiida.common import NotExistent
 
 __all__ = (
     "InpaintingStructureData",
@@ -138,8 +140,7 @@ class BatchedStructuresData(Data):
         return ase_atoms
 
     def _structures_to_file(self, structures, name) -> None:
-        import tempfile
-
+        """Store the structures as an extxyz file in the repository."""
         # Write the array to a temporary file, and then add it to the
         # repository of the node
         with tempfile.NamedTemporaryFile(mode="w+", suffix="extxyz") as handle:
@@ -291,3 +292,42 @@ class BatchedStructuresData(Data):
                 f"Unknown structure type: {strct_type}. Available types are "
                 "'ase', 'pymatgen', and 'aiida'."
             )
+
+
+class PandasDataFrameData(Data):
+    """AiiDA node to store a pandas DataFrame as a .parquet file."""
+
+    def __init__(self, value=None, **kwargs):
+        """Initialize the PandasDataFrameData with a DataFrame."""
+        df = value
+        super().__init__(**kwargs)
+
+        self.base.attributes.set("filename", "dataframe.parquet")
+        self._df_to_file(df)
+
+    def _df_to_file(self, df: pd.DataFrame) -> None:
+        """Store the DataFrame as a .parquet file in the repository."""
+        with tempfile.NamedTemporaryFile(
+            mode="w+b", suffix=".parquet"
+        ) as handle:
+            df.to_parquet(handle, index=True)
+
+            handle.flush()
+            handle.seek(0)
+
+            self.base.repository.put_object_from_filelike(
+                handle, self.attributes.get("filename")
+            )
+
+    @property
+    def value(self) -> pd.DataFrame:
+        """Return the stored DataFrame."""
+        if "dataframe.parquet" not in self.base.repository.list_object_names():
+            raise NotExistent("No dataframe found in the repository.")
+
+        with self.base.repository.open(
+            self.base.attributes.get("filename"), mode="rb"
+        ) as handle:
+            df = pd.read_parquet(handle)
+
+        return df
