@@ -156,7 +156,7 @@ class BatchedStructuresData(Data):
             )
 
     def _get_structures_from_file(self, keys=None) -> list[ase.Atoms]:
-        """Read the stored structures from file."""
+        """Return the stored structures from file."""
         all_keys = self.keys()
 
         if self.file_name not in self.base.repository.list_object_names():
@@ -169,8 +169,6 @@ class BatchedStructuresData(Data):
                 "in the available structures."
             )
 
-        indices = [":"] if keys is None else [all_keys.index(k) for k in keys]
-
         with self.base.repository.open(self.file_name, mode="rb") as handle:
             wrapped_handle = (
                 io.TextIOWrapper(io.BytesIO(handle.read()))
@@ -178,24 +176,21 @@ class BatchedStructuresData(Data):
                 else io.TextIOWrapper(handle)
             )
 
-            all_ase_structures = []
-            for index in indices:
-                if isinstance(handle, PackedObjectReader):
-                    # If the handle is a PackedObjectReader, read the content
-                    # as bytes
-                    ase_structures = ase.io.read(
-                        wrapped_handle,
-                        index=f"{index}",
-                        format="extxyz",
-                    )
-                else:
-                    ase_structures = ase.io.read(
-                        wrapped_handle, index=f"{index}", format="extxyz"
-                    )
+            if keys is None:
+                all_ase_structures = ase.io.read(
+                    wrapped_handle, index=":", format="extxyz"
+                )
+            else:
+                indices = [all_keys.index(k) for k in keys]
+                index_to_ase_strct = {}
 
-                if isinstance(ase_structures, ase.Atoms):
-                    ase_structures = [ase_structures]
-                all_ase_structures.extend(ase_structures)
+                for idx, ase_strct in enumerate(
+                    ase.io.iread(wrapped_handle, index=":", format="extxyz")
+                ):
+                    if idx in indices:
+                        index_to_ase_strct[idx] = ase_strct
+
+                all_ase_structures = [index_to_ase_strct[i] for i in indices]
 
         return all_ase_structures
 
