@@ -1,11 +1,9 @@
-"""This module provides functions to generate inpainting candidates for crystal structures"""
+"""Functions to generate inpainting candidates for crystal structures."""
 
 from typing import Dict, Iterable, List, Tuple, Union
 import numpy as np
 from pymatgen.core import Structure
 from aiida.orm import StructureData
-from aiida_workgraph import task
-from dbcsi_inpainting.aiida.data import BatchedStructures
 
 
 def _add_inpainting_sites(structure, n_sites, element):
@@ -22,11 +20,11 @@ def _structures_to_pymatgen(
         Dict[str, Union[Structure, StructureData]],
     ],
 ) -> List[Structure]:
-    """
-    Convert a list or dictionary of structures to a list of pymatgen Structure objects.
+    """Convert structures to list of pymatgen Structure objects.
 
     Args:
-        structures: List or dictionary of pymatgen Structure objects or AiiDA StructureData objects.
+        structures: List or dictionary of pymatgen Structure objects or
+            AiiDA StructureData objects.
 
     Returns:
         List of pymatgen Structure objects.
@@ -85,12 +83,31 @@ def structure_to_inpainting_candidates(
     element: str,
     num_samples: int = 1,
 ) -> List[Structure]:
+    """Generate inpainting candidates for a single structure.
+
+    Args:
+        structure (Structure): The original structure.
+        strct_key (str): The key for the structure.
+        num_inpaint_sites (Union[int, Tuple]): The number of inpainting sites
+            to add.
+        element (str): The element to be removed and replaced with inpainting
+            sites.
+        num_samples (int, optional): The number of samples to generate.
+            Defaults to 1.
+
+    Raises:
+        ValueError: If num_inpaint_sites is not valid.
+
+    Returns:
+        List[Structure]: A list of structures with inpainting candidates.
+    """
     if (
         isinstance(num_inpaint_sites, tuple)
         and not len(num_inpaint_sites) == 2
     ):
         raise ValueError(
-            "num_inpaint_sites must be an int or a tuple of two ints (start, end)"
+            "num_inpaint_sites must be an int or a tuple of two "
+            "ints (start, end)"
         )
 
     structures_sites_removed = {}
@@ -100,7 +117,14 @@ def structure_to_inpainting_candidates(
     for i_sample in range(num_samples):
         for j in range(num_inpaint_sites[0], num_inpaint_sites[1] + 1):
             s_removed = structure.copy()
-            s_removed.remove_species(element)
+            # s_removed.remove_species(element)
+            s_removed.remove_sites(
+                [
+                    i
+                    for i, site in enumerate(s_removed.sites)
+                    if site.specie.symbol == element
+                ]
+            )
             s_removed = _add_inpainting_sites(s_removed, j, element)
 
             label = strct_key
@@ -123,13 +147,15 @@ def generate_inpainting_candidates(
     element: Union[str, List[str]],
     num_samples: int = 1,
 ) -> List[Structure]:
-    """
-    Generate inpainting candidates for a list of structures by removing the specified element and adding
-    a variable number of inpainting sites.
+    """Generate inpainting candidates.
+
+    Generate inpainting candidates for a list of structures by removing the
+    specified element and adding a variable number of inpainting sites.
 
     Args:
         structures: Iterable of pymatgen Structure objects.
-        n_inp: Number of inpainting sites to add, can be an int, a tuple (start, end), or a list of ints or tuples.
+        n_inp: Number of inpainting sites to add, can be an int, a tuple
+            (start, end), or a list of ints or tuples.
         element: Element to be removed and replaced with inpainting sites.
 
     Returns:
@@ -148,34 +174,3 @@ def generate_inpainting_candidates(
         )
 
     return candidates
-
-
-@task(
-    inputs=[
-        {
-            "name": "structures",
-            "identifier": "workgraph.namespace",
-            "metadata": {"dynamic": True},
-        }
-    ],
-    outputs=[
-        {
-            "name": "candidates",
-            # "identifier": "workgraph.namespace",
-            # "metadata": {"dynamic": True},
-        }
-    ],
-)
-def _aiida_generate_inpainting_candidates(
-    structures: Union[Structure, Iterable[Structure]],
-    n_inp: Union[int, Tuple[int, int], List[int], List[Tuple[int, int]]],
-    element: Union[str, List[str]],
-    num_samples: int = 1,
-) -> BatchedStructures:
-    candidates = generate_inpainting_candidates(
-        structures=structures,
-        n_inp=n_inp,
-        element=element,
-        num_samples=num_samples,
-    )
-    return {"candidates": BatchedStructures(candidates)}
