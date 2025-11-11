@@ -17,20 +17,21 @@ repos:
       - id: check-toml
       - id: check-json
       - id: check-added-large-files
+        exclude: ^(uv\.lock)$
       - id: check-merge-conflict
 
   - repo: local
     hooks:
       - id: ruff
         name: ruff lint
-        entry: ruff check
+        entry: uv run ruff check
         language: system
         types: [python]
         args: [--fix]
         files: ^src/
       - id: ruff-format
         name: ruff format
-        entry: ruff format
+        entry: uv run ruff format
         language: system
         types: [python]
         files: ^src/
