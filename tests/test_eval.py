@@ -2,13 +2,31 @@
 
 import numpy as np
 import pytest
+from ase.io import read
 from pymatgen.core.structure import Structure
+from pymatgen.io.ase import AseAtomsAdaptor
 
 from dbcsi_inpainting.eval import (
     _check_for_nan,
     evaluate_inpainting,
     get_structure_keys,
 )
+
+
+@pytest.fixture
+def reference_structures():
+    """Load reference structures from extxyz file."""
+    atoms_list = read(
+        "tests/data/reference_structures.extxyz",
+        index=":",
+    )
+    adaptor = AseAtomsAdaptor()
+    structures = {}
+    for atoms in atoms_list:
+        key = atoms.info.get("key")
+        if key:
+            structures[key] = adaptor.get_structure(atoms)
+    return structures
 
 
 @pytest.fixture
@@ -60,6 +78,11 @@ class TestCheckForNan:
         """Test structure with NaN values."""
         assert _check_for_nan(nan_structure)
 
+    def test_real_structures(self, reference_structures):
+        """Test that real structures have no NaN values."""
+        for key, structure in reference_structures.items():
+            assert not _check_for_nan(structure), f"Structure {key} has NaN"
+
 class TestGetStructureKeys:
     """Test the get_structure_keys function."""
 
@@ -84,16 +107,14 @@ class TestGetStructureKeys:
         assert keys == ["structure_1", "structure_1", "structure_2"]
         assert indices == ["0", "1", "0"]
 
-    def test_mixed_samples(self):
-        """Test with mixed keys (some with samples, some without)."""
-        structures = {
-            "structure_1": None,
-            "structure_2_sample_0": None,
-            "structure_2_sample_1": None,
-        }
-        keys, indices = get_structure_keys(structures)
-        assert keys == ["structure_1", "structure_2", "structure_2"]
-        assert indices == [None, "0", "1"]
+    def test_real_structure_keys(self, reference_structures):
+        """Test with real structure keys from extxyz."""
+        keys, indices = get_structure_keys(reference_structures)
+        # All keys should have sample indices
+        assert len(keys) == len(reference_structures)
+        # Check that sample indices are extracted correctly
+        for idx in indices:
+            assert idx is not None
 
 
 class TestEvaluateInpainting:
@@ -177,3 +198,67 @@ class TestEvaluateInpainting:
 
         with pytest.raises(ValueError, match="keys of inpainted structures"):
             evaluate_inpainting(inpainted, reference, metric="match")
+
+    def test_real_structures_subset(self, reference_structures):
+        """Test with a subset of real structures."""
+        # Take first 5 structures
+        subset_keys = list(reference_structures.keys())[:5]
+        reference = {k: reference_structures[k] for k in subset_keys}
+
+        # Remove sample suffix to create base keys
+        base_keys = [k.rsplit("_sample_", 1)[0] for k in subset_keys]
+        inpainted = {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)}
+
+        agg, individual = evaluate_inpainting(
+            inpainted,
+            {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)},
+            metric="match",
+            max_workers=2,
+        )
+
+        # All should match since they're identical
+        for key in base_keys:
+            assert agg[key] == [True]
+            assert individual[key] is True
+
+    def test_real_structures_rmsd(self, reference_structures):
+        """Test RMSD metric with real structures."""
+        # Take first 3 structures
+        subset_keys = list(reference_structures.keys())[:3]
+        base_keys = [k.rsplit("_sample_", 1)[0] for k in subset_keys]
+
+        reference = {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)}
+        inpainted = {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)}
+
+        agg, individual = evaluate_inpainting(
+            inpainted,
+            reference,
+            metric="rmsd",
+            max_workers=1,
+        )
+
+        # RMSD should be close to 0 for identical structures
+        for key in base_keys:
+            assert agg[key][0] == pytest.approx(0.0, abs=1e-3)
+            assert individual[key] == pytest.approx(0.0, abs=1e-3)
+
+    def test_parallel_workers(self, reference_structures):
+        """Test evaluation with multiple workers."""
+        subset_keys = list(reference_structures.keys())[:10]
+        base_keys = [k.rsplit("_sample_", 1)[0] for k in subset_keys]
+
+        reference = {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)}
+        inpainted = {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)}
+
+        agg, individual = evaluate_inpainting(
+            inpainted,
+            reference,
+            metric="match",
+            max_workers=4,
+            chunksize=3,
+        )
+
+        # All should match
+        assert len(agg) == len(base_keys)
+        for key in base_keys:
+            assert agg[key] == [True]

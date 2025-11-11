@@ -1,14 +1,15 @@
-"""This module provides functions to generate inpainting candidates for crystal structures"""
+"""Functions to generate inpainting candidates for crystal structures."""
 
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Iterable
+
 import numpy as np
-from pymatgen.core import Structure
 from aiida.orm import StructureData
-from aiida_workgraph import task
-from dbcsi_inpainting.aiida.data import BatchedStructures
+from pymatgen.core import Structure
 
 
-def _add_inpainting_sites(structure, n_sites, element):
+def _add_inpainting_sites(
+    structure: Structure, n_sites: int, element: str
+) -> Structure:
     """Add n_sites sites with the element to the structure."""
     structure = structure.copy()
     for _ in range(n_sites):
@@ -17,19 +18,17 @@ def _add_inpainting_sites(structure, n_sites, element):
 
 
 def _structures_to_pymatgen(
-    structures: Union[
-        List[Union[Structure, StructureData]],
-        Dict[str, Union[Structure, StructureData]],
-    ],
-) -> List[Structure]:
-    """
-    Convert a list or dictionary of structures to a list of pymatgen Structure objects.
+    structures: list[Structure | StructureData]
+    | dict[str, Structure | StructureData],
+) -> dict[str, Structure]:
+    """Convert structures to list of pymatgen Structure objects.
 
     Args:
-        structures: List or dictionary of pymatgen Structure objects or AiiDA StructureData objects.
+        structures: List or dictionary of pymatgen Structure objects or
+            AiiDA StructureData objects.
 
     Returns:
-        List of pymatgen Structure objects.
+        dict[str, Structure]: Dictionary of pymatgen Structure objects.
     """
     if isinstance(structures, list):
         structures = {f"{i}": s for i, s in enumerate(structures)}
@@ -51,9 +50,9 @@ def _structures_to_pymatgen(
 
 
 def _prepare_inpainting_inputs(
-    structures: Union[Structure, Iterable[Structure], Dict[str, Structure]],
-    n_inp: Union[int, Tuple[int, int], List[int], List[Tuple[int, int]]],
-    element: Union[str, List[str]],
+    structures: Structure | Iterable[Structure] | dict[str, Structure],
+    n_inp: int | tuple[int, int] | dict[str, int | tuple[int, int]],
+    element: str | dict[str, str],
 ):
     if not isinstance(structures, (list, dict)):
         structures = {"0": structures}
@@ -62,12 +61,16 @@ def _prepare_inpainting_inputs(
 
     if isinstance(element, str):
         element = {key: element for key in structures.keys()}
-    if isinstance(n_inp, int):
+    elif not isinstance(element, dict):
+        raise ValueError("element must be a str or a dict of str")
+    if isinstance(n_inp, (int, tuple)):
         n_inp = {key: n_inp for key in structures.keys()}
+    elif not isinstance(n_inp, dict):
+        raise ValueError("n_inp must be an int, tuple, or dict")
 
     if not all(
         [
-            len(n) == 2 if isinstance(n, list) else isinstance(n, int)
+            len(n) == 2 if isinstance(n, (list, tuple)) else isinstance(n, int)
             for n in n_inp.values()
         ]
     ):
@@ -81,16 +84,35 @@ def _prepare_inpainting_inputs(
 def structure_to_inpainting_candidates(
     structure: Structure,
     strct_key: str,
-    num_inpaint_sites: Union[int, Tuple],
+    num_inpaint_sites: int | tuple[int, int],
     element: str,
     num_samples: int = 1,
-) -> List[Structure]:
+) -> dict[str, Structure]:
+    """Generate inpainting candidates for a single structure.
+
+    Args:
+        structure (Structure): The original structure.
+        strct_key (str): The key for the structure.
+        num_inpaint_sites (Union[int, Tuple]): The number of inpainting sites
+            to add.
+        element (str): The element to be removed and replaced with inpainting
+            sites.
+        num_samples (int, optional): The number of samples to generate.
+            Defaults to 1.
+
+    Raises:
+        ValueError: If num_inpaint_sites is not valid.
+
+    Returns:
+        List[Structure]: A list of structures with inpainting candidates.
+    """
     if (
         isinstance(num_inpaint_sites, tuple)
         and not len(num_inpaint_sites) == 2
     ):
         raise ValueError(
-            "num_inpaint_sites must be an int or a tuple of two ints (start, end)"
+            "num_inpaint_sites must be an int or a tuple of two "
+            "ints (start, end)"
         )
 
     structures_sites_removed = {}
@@ -100,7 +122,13 @@ def structure_to_inpainting_candidates(
     for i_sample in range(num_samples):
         for j in range(num_inpaint_sites[0], num_inpaint_sites[1] + 1):
             s_removed = structure.copy()
-            s_removed.remove_species(element)
+            s_removed.remove_sites(
+                [
+                    i
+                    for i, site in enumerate(s_removed.sites)
+                    if site.specie.symbol == element
+                ]
+            )
             s_removed = _add_inpainting_sites(s_removed, j, element)
 
             label = strct_key
@@ -118,22 +146,26 @@ def structure_to_inpainting_candidates(
 
 
 def generate_inpainting_candidates(
-    structures: Union[Structure, Iterable[Structure]],
-    n_inp: Union[int, Tuple[int, int], List[int], List[Tuple[int, int]]],
-    element: Union[str, List[str]],
+    structures: Structure | Iterable[Structure] | dict[str, Structure],
+    n_inp: int | tuple[int, int] | dict[str, int | tuple[int, int]],
+    element: str | dict[str, str],
     num_samples: int = 1,
-) -> List[Structure]:
-    """
-    Generate inpainting candidates for a list of structures by removing the specified element and adding
-    a variable number of inpainting sites.
+) -> dict[str, Structure]:
+    """Generate inpainting candidates.
+
+    Generate inpainting candidates for a list of structures by removing the
+    specified element and adding a variable number of inpainting sites.
 
     Args:
         structures: Iterable of pymatgen Structure objects.
-        n_inp: Number of inpainting sites to add, can be an int, a tuple (start, end), or a list of ints or tuples.
+        n_inp: Number of inpainting sites to add, can be an int, a tuple
+            (start, end).
         element: Element to be removed and replaced with inpainting sites.
+        num_samples: Number of samples to generate per structure.
 
     Returns:
-        List of pymatgen Structure objects with inpainting candidates.
+        Dict[str, Structure]: Dictionary of pymatgen Structure objects
+            with inpainting candidates.
     """
     structures, n_inp, element = _prepare_inpainting_inputs(
         structures=structures, n_inp=n_inp, element=element
@@ -148,34 +180,3 @@ def generate_inpainting_candidates(
         )
 
     return candidates
-
-
-@task(
-    inputs=[
-        {
-            "name": "structures",
-            "identifier": "workgraph.namespace",
-            "metadata": {"dynamic": True},
-        }
-    ],
-    outputs=[
-        {
-            "name": "candidates",
-            # "identifier": "workgraph.namespace",
-            # "metadata": {"dynamic": True},
-        }
-    ],
-)
-def _aiida_generate_inpainting_candidates(
-    structures: Union[Structure, Iterable[Structure]],
-    n_inp: Union[int, Tuple[int, int], List[int], List[Tuple[int, int]]],
-    element: Union[str, List[str]],
-    num_samples: int = 1,
-) -> BatchedStructures:
-    candidates = generate_inpainting_candidates(
-        structures=structures,
-        n_inp=n_inp,
-        element=element,
-        num_samples=num_samples,
-    )
-    return {"candidates": BatchedStructures(candidates)}
