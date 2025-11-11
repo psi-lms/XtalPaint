@@ -1,13 +1,15 @@
 """Functions to generate inpainting candidates for crystal structures."""
 
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Iterable
 
 import numpy as np
 from aiida.orm import StructureData
 from pymatgen.core import Structure
 
 
-def _add_inpainting_sites(structure, n_sites, element):
+def _add_inpainting_sites(
+    structure: Structure, n_sites: int, element: str
+) -> Structure:
     """Add n_sites sites with the element to the structure."""
     structure = structure.copy()
     for _ in range(n_sites):
@@ -16,11 +18,9 @@ def _add_inpainting_sites(structure, n_sites, element):
 
 
 def _structures_to_pymatgen(
-    structures: Union[
-        List[Union[Structure, StructureData]],
-        Dict[str, Union[Structure, StructureData]],
-    ],
-) -> List[Structure]:
+    structures: list[Structure | StructureData]
+    | dict[str, Structure | StructureData],
+) -> dict[str, Structure]:
     """Convert structures to list of pymatgen Structure objects.
 
     Args:
@@ -28,7 +28,7 @@ def _structures_to_pymatgen(
             AiiDA StructureData objects.
 
     Returns:
-        List of pymatgen Structure objects.
+        dict[str, Structure]: Dictionary of pymatgen Structure objects.
     """
     if isinstance(structures, list):
         structures = {f"{i}": s for i, s in enumerate(structures)}
@@ -50,9 +50,9 @@ def _structures_to_pymatgen(
 
 
 def _prepare_inpainting_inputs(
-    structures: Union[Structure, Iterable[Structure], Dict[str, Structure]],
-    n_inp: Union[int, Tuple[int, int], List[int], List[Tuple[int, int]]],
-    element: Union[str, List[str]],
+    structures: Structure | Iterable[Structure] | dict[str, Structure],
+    n_inp: int | tuple[int, int] | dict[str, int | tuple[int, int]],
+    element: str | dict[str, str],
 ):
     if not isinstance(structures, (list, dict)):
         structures = {"0": structures}
@@ -147,7 +147,7 @@ def structure_to_inpainting_candidates(
 
 def generate_inpainting_candidates(
     structures: Structure | Iterable[Structure] | dict[str, Structure],
-    n_inp: int | tuple(int, int) | dict[str, int | tuple(int, int)],
+    n_inp: int | tuple[int, int] | dict[str, int | tuple[int, int]],
     element: str | dict[str, str],
     num_samples: int = 1,
 ) -> dict[str, Structure]:
