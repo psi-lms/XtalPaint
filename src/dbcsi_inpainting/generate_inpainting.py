@@ -1,34 +1,35 @@
-from torch.utils.data import DataLoader
-from pymatgen.core.structure import Structure
-from typing import Literal
+"""Generator object to generate structures with mattergen.
+
+These objects and functions were taken from the original mattergen repository
+https://github.com/microsoft/mattergen and adapted for the inpainting task.
+"""
+
 from pathlib import Path
+from typing import Literal
+
 from hydra.utils import instantiate
-from omegaconf import OmegaConf
-from pymatgen.core.trajectory import Trajectory
-
-
+from mattergen.common.data.chemgraph import ChemGraph
+from mattergen.common.data.collate import collate
+from mattergen.common.data.condition_factory import ConditionLoader
 from mattergen.common.data.types import TargetProperty
 from mattergen.common.utils.data_classes import (
-    MatterGenCheckpointInfo,
     PRETRAINED_MODEL_NAME,
+    MatterGenCheckpointInfo,
 )
+from mattergen.common.utils.data_utils import lattice_matrix_to_params_torch
+from mattergen.diffusion.sampling.pc_sampler import PredictorCorrector
 from mattergen.generator import (
     CrystalGenerator,
     list_of_time_steps_to_list_of_trajectories,
     structure_from_model_output,
     structures_from_trajectory,
 )
-
-
+from omegaconf import OmegaConf
+from pymatgen.core.structure import Structure
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from mattergen.common.data.chemgraph import ChemGraph
-from mattergen.common.data.collate import collate
-from mattergen.common.data.condition_factory import ConditionLoader
-
-from mattergen.common.utils.data_utils import lattice_matrix_to_params_torch
-
-from mattergen.diffusion.sampling.pc_sampler import PredictorCorrector
+from dbcsi_inpainting.aiida.data import BatchedStructures
 
 
 def draw_samples_from_sampler(
@@ -38,10 +39,12 @@ def draw_samples_from_sampler(
     record_trajectories: bool = True,
     fix_cell: bool = True,
 ) -> list[Structure]:
+    """Draw samples from a given sampler."""
     # Dict
     properties_to_condition_on = properties_to_condition_on or {}
 
-    # we cannot conditional sample on something on which the model was not trained to condition on
+    # we cannot conditional sample on something on which the model was not
+    # trained to condition on
     assert all(
         [
             key
@@ -52,16 +55,20 @@ def draw_samples_from_sampler(
 
     all_samples_list = []
     all_trajs_list = []
+    all_mean_trajs_list = []
     for conditioning_data, mask in tqdm(
         condition_loader, desc="Generating samples"
     ):
         # generate samples
         if record_trajectories:
-            # sample, mean, intermediate_samples = sampler.sample_with_record(conditioning_data, mask)
-            # sample, mean, intermediate_samples, intermediate_means = sampler.sample_with_record(conditioning_data, mask)
             _out = sampler.sample_with_record(conditioning_data, mask)
             if len(_out) == 4:
                 sample, mean, intermediate_samples, intermediate_means = _out
+                all_mean_trajs_list.extend(
+                    list_of_time_steps_to_list_of_trajectories(
+                        intermediate_means
+                    )
+                )
             elif len(_out) == 3:
                 sample, mean, intermediate_samples = _out
             all_trajs_list.extend(
@@ -86,26 +93,39 @@ def draw_samples_from_sampler(
     )
 
     trajectories = []
+    mean_trajectories = []
     for ix, traj in enumerate(all_trajs_list):
-        strucs = structures_from_trajectory(traj)
-        trajectories.append(
-            Trajectory.from_structures(
-                strucs,
-                constant_lattice=fix_cell,
+        trajectory_as_dict = {
+            f"{strct_i}": strct
+            for strct_i, strct in enumerate(structures_from_trajectory(traj))
+        }
+        trajectories.append(BatchedStructures(trajectory_as_dict))
+        if all_mean_trajs_list:
+            mean_trajectory_as_dict = {
+                f"{strct_i}": strct
+                for strct_i, strct in enumerate(
+                    structures_from_trajectory(all_mean_trajs_list[ix])
+                )
+            }
+            mean_trajectories.append(
+                BatchedStructures(mean_trajectory_as_dict)
             )
-        )
 
-    return generated_strucs, trajectories
+    return generated_strucs, trajectories, mean_trajectories
 
 
 class CrystalInpaintingGenerator(CrystalGenerator):
+    """Generator for crystal inpainting using MatterGen."""
+
     dataloader: DataLoader
 
     def __init__(self, dataloader: DataLoader, *args, **kwargs):
+        """Initialize the CrystalInpaintingGenerator."""
         self.dataloader = dataloader
         super().__init__(*args, **kwargs)
 
     def get_condition_loader(self, *args, **kwargs):
+        """Override to use the provided dataloader."""
         return self.dataloader
 
     def generate(
@@ -115,7 +135,9 @@ class CrystalInpaintingGenerator(CrystalGenerator):
         target_compositions_dict: list[dict[str, float]] | None = None,
         fix_cell: bool = True,
     ) -> list[Structure]:
-        # Prioritize the runtime provided batch_size, num_batches and target_compositions_dict
+        """Generate structures using the inpainting model."""
+        # Prioritize the runtime provided batch_size, num_batches and
+        # target_compositions_dict
         batch_size = batch_size or self.batch_size
         num_batches = num_batches or self.num_batches
         target_compositions_dict = (
@@ -162,7 +184,7 @@ class CrystalInpaintingGenerator(CrystalGenerator):
 def generate_reconstructed_structures(
     structures_to_reconstruct: DataLoader,
     pretrained_name: PRETRAINED_MODEL_NAME | None = "mattergen_base",
-    model_path: str = None,  # '/data/user/reents_t/projects/mlip/git/mattergen/checkpoints/mattergen_base',
+    model_path: str = None,
     batch_size: int = 10,
     num_batches: int = 1,
     config_overrides: list[str] | None = None,
@@ -177,24 +199,49 @@ def generate_reconstructed_structures(
     target_compositions: list[dict[str, int]] | None = None,
     fix_cell: bool = True,
 ):
-    """
-    Evaluate diffusion model against molecular metrics.
+    """Evaluate diffusion model against molecular metrics.
 
     Args:
+        structures_to_reconstruct: DataLoader providing structures to
+            reconstruct.
+        pretrained_name: Name of pretrained model.
         model_path: Path to DiffusionLightningModule checkpoint directory.
-        output_path: Path to output directory.
-        config_overrides: Overrides for the model config, e.g., `model.num_layers=3 model.hidden_dim=128`.
-        properties_to_condition_on: Property value to draw conditional sampling with respect to. When this value is an empty dictionary (default), unconditional samples are drawn.
-        sampling_config_path: Path to the sampling config file. (default: None, in which case we use `DEFAULT_SAMPLING_CONFIG_PATH` from explorers.common.utils.utils.py)
-        sampling_config_name: Name of the sampling config (corresponds to `{sampling_config_path}/{sampling_config_name}.yaml` on disk). (default: default)
-        sampling_config_overrides: Overrides for the sampling config, e.g., `condition_loader_partial.batch_size=32`.
-        load_epoch: Epoch to load from the checkpoint. If None, the best epoch is loaded. (default: None)
-        record: Whether to record the trajectories of the generated structures. (default: True)
-        strict_checkpoint_loading: Whether to raise an exception when not all parameters from the checkpoint can be matched to the model.
-        target_compositions: List of dictionaries with target compositions to condition on. Each dictionary should have the form `{element: number_of_atoms}`. If None, the target compositions are not conditioned on.
-           Only supported for models trained for crystal structure prediction (CSP) (default: None)
+        batch_size: Batch size for sampling.
+        num_batches: Number of batches to sample.
+        config_overrides: Overrides for the model config, e.g.,
+            `model.num_layers=3 model.hidden_dim=128`.
+        checkpoint_epoch: Epoch to load from the checkpoint. If 'best' or
+            'last', the corresponding epoch is loaded. If an integer is
+            provided, the specific epoch is loaded.
+        properties_to_condition_on: Property value to draw conditional sampling
+            with respect to. When this value is an empty dictionary (default),
+            unconditional samples are drawn.
+        sampling_config_path: Path to the sampling config file.
+            (default: None, in which case we use `DEFAULT_SAMPLING_CONFIG_PATH`
+            from explorers.common.utils.utils.py)
+        sampling_config_name: Name of the sampling config (corresponds to
+            `{sampling_config_path}/{sampling_config_name}.yaml` on disk).
+            (default: default)
+        sampling_config_overrides: Overrides for the sampling config, e.g.,
+            `condition_loader_partial.batch_size=32`.
+        record_trajectories: Whether to record the trajectories of the
+            generated structures. (default: True)
+        diffusion_guidance_factor: Guidance factor for diffusion sampling.
+            If None, no guidance is applied. (default: None)
+        strict_checkpoint_loading: Whether to raise an exception when not all
+            parameters from the checkpoint can be matched to the model.
+        target_compositions: List of dictionaries with target compositions to
+            condition on. Each dictionary should have the form
+            `{element: number_of_atoms}`. If None, the target compositions
+            are not conditioned on.
+            Only supported for models trained for crystal structure prediction
+            (CSP) (default: None)
+        fix_cell: Whether to fix the unit cell during diffusion.
+            (default: True)
 
-    NOTE: When specifying dictionary values via the CLI, make sure there is no whitespace between the key and value, e.g., `--properties_to_condition_on={key1:value1}`.
+    NOTE: When specifying dictionary values via the CLI, make sure there is no
+        whitespace between the key and value, e.g.,
+        `--properties_to_condition_on={key1:value1}`.
     """
     assert pretrained_name is not None or model_path is not None, (
         "Either pretrained_name or model_path must be provided."
