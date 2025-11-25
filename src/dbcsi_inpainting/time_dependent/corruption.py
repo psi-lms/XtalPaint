@@ -1,9 +1,11 @@
+"""TD-Paint corruption module."""
+
 import torch
 from mattergen.diffusion.corruption.corruption import (
     B,
     BatchedData,
-    maybe_expand,
     _broadcast_like,
+    maybe_expand,
 )
 from mattergen.diffusion.corruption.sde_lib import SDE as DiffSDE
 from mattergen.diffusion.corruption.sde_lib import VESDE as DiffVESDE
@@ -11,9 +13,10 @@ from mattergen.diffusion.wrapped.wrapped_sde import WrappedVESDE
 
 
 class TDNumAtomsVarianceAdjustedWrappedVESDE(WrappedVESDE):
-    """Wrapped VESDE with variance adjusted by number of atoms. We divide the
-    standard deviation by the cubic root of the number of atoms. The goal is to
-    reduce the influence by the cell size on the variance of the
+    """Wrapped VESDE with variance adjusted by number of atoms.
+
+    We divide the standard deviation by the cubic root of the number of atoms.
+    The goal is to reduce the influence by the cell size on the variance of the
     fractional coordinates.
     """
 
@@ -24,6 +27,7 @@ class TDNumAtomsVarianceAdjustedWrappedVESDE(WrappedVESDE):
         sigma_max: float = 5.0,
         limit_info_key: str = "num_atoms",
     ):
+        """Initialize the NumAtomsVarianceAdjustedWrappedVESDE."""
         super().__init__(
             sigma_min=sigma_min,
             sigma_max=sigma_max,
@@ -32,6 +36,7 @@ class TDNumAtomsVarianceAdjustedWrappedVESDE(WrappedVESDE):
         self.limit_info_key = limit_info_key
 
     def std_scaling(self, batch: BatchedData) -> torch.Tensor:
+        """Get the standard deviation scaling factor."""
         std_scale = batch[self.limit_info_key] ** (-1 / 3)
         return std_scale[batch.get_batch_idx("pos")]
 
@@ -42,6 +47,7 @@ class TDNumAtomsVarianceAdjustedWrappedVESDE(WrappedVESDE):
         batch_idx: B = None,
         batch: BatchedData | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute the mean and std of the perturbation kernel."""
         assert t.shape[0] == x.shape[0]
 
         mean, std = super().marginal_prob(x, t, None, batch)
@@ -65,6 +71,7 @@ class TDNumAtomsVarianceAdjustedWrappedVESDE(WrappedVESDE):
         conditioning_data: BatchedData | None = None,
         batch_idx=None,
     ) -> torch.Tensor:
+        """Generate prior samples with variance adjusted by number of atoms."""
         _super = super()
         assert isinstance(self, DiffSDE) and hasattr(_super, "prior_sampling")
         assert conditioning_data is not None, (
@@ -98,6 +105,7 @@ class TDNumAtomsVarianceAdjustedWrappedVESDE(WrappedVESDE):
         batch_idx: B = None,
         batch: BatchedData | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute the drift and diffusion of the SDE."""
         sigma = self.marginal_prob(x, t, batch_idx, batch)[1]
         sigma_min = self.marginal_prob(
             x, torch.zeros_like(t), batch_idx, batch
