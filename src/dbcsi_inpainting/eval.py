@@ -4,6 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 
 import numpy as np
+import pandas as pd
 from mattergen.evaluation.utils.utils import compute_rmsd_angstrom
 from pymatgen.analysis.structure_matcher import StructureMatcher
 from pymatgen.core.structure import Structure
@@ -21,9 +22,21 @@ def _check_for_nan(structure: Structure) -> bool:
     return np.isnan(positions).any()
 
 
-def _rmsd(strct1, strct2) -> float:
-    """Compute RMSD between two structures."""
-    return compute_rmsd_angstrom(strct1, strct2)
+def _rmsd(strct1, strct2, normalization_element: str | None = None) -> float:
+    """Compute RMSD between two structures.
+
+    If normalization_element is provided, normalize by the number of
+    atoms of that element, instead of total atoms.
+    """
+    rmsd = compute_rmsd_angstrom(strct1, strct2)
+    if normalization_element:
+        total_atoms = len(strct1)
+        n_elem_atoms = strct1.composition[normalization_element]
+        if n_elem_atoms == 0:
+            return float("inf")
+        rmsd *= (total_atoms / n_elem_atoms) ** 0.5
+
+    return rmsd
 
 
 def _match(strct1, strct2) -> bool:
@@ -40,6 +53,7 @@ COMPARISON_METHODS = {
 def _comparison_per_key(
     key: str,
     metric: str,
+    **kwargs,
 ) -> bool:
     """For a given base key, compare all its inpainted samples."""
     ref = reference_structures[key]
@@ -50,7 +64,7 @@ def _comparison_per_key(
         if _check_for_nan(sample):
             comparison = None
         else:
-            comparison = comp_func(sample, ref)
+            comparison = comp_func(sample, ref, **kwargs)
         comparisons.append((sample_idx, comparison))
 
     return comparisons
@@ -99,6 +113,7 @@ def _parallel_structure_comparison(
     metric: str,
     max_workers: int = 6,
     chunksize: int = 50,
+    **comparison_kwargs,
 ):
     structure_keys, sample_indices = get_structure_keys(inpainted_structures)
     inpainted_structures_grouped = {}
@@ -115,13 +130,13 @@ def _parallel_structure_comparison(
         initializer=worker_init,
         initargs=(reference_structures, inpainted_structures_grouped),
     ) as executor:
-        # preserve the initial key order
-        metric_agg = {}
         metric_individual = {}
 
         pbar = tqdm(
             executor.map(
-                partial(_comparison_per_key, metric=metric),
+                partial(
+                    _comparison_per_key, metric=metric, **comparison_kwargs
+                ),
                 structure_keys,
                 chunksize=chunksize,
             ),
@@ -129,15 +144,13 @@ def _parallel_structure_comparison(
         )
 
         for key, metric_value in zip(structure_keys, pbar):
-            metric_agg[key] = [m[1] for m in metric_value]
-
             for sample_idx, match in metric_value:
                 if sample_idx is not None:
                     metric_individual[f"{key}_sample_{sample_idx}"] = match
                 else:
                     metric_individual[key] = match
 
-    return metric_agg, metric_individual
+    return metric_individual
 
 
 def evaluate_inpainting(
@@ -151,7 +164,8 @@ def evaluate_inpainting(
     metric: str = "match",
     max_workers: int = 6,
     chunksize: int = 50,
-) -> dict[str, bool]:
+    **comparison_kwargs,
+) -> pd.DataFrame:
     """Evaluate inpainting by comparing inpainted structures with references.
 
     Args:
@@ -165,6 +179,8 @@ def evaluate_inpainting(
             use. Defaults to 6.
         chunksize (int, optional): The chunk size for processing.
             Defaults to 50.
+        **comparison_kwargs: Additional keyword arguments for the comparison
+            function.
 
     Raises:
         ValueError: If the keys of inpainted structures do not match the keys
@@ -197,12 +213,15 @@ def evaluate_inpainting(
             strct_type="pymatgen"
         )
 
-    metric_agg, metric_individual = _parallel_structure_comparison(
+    metric_results = _parallel_structure_comparison(
         inpainted_structures=inpainted_structures,
         reference_structures=reference_structures,
         metric=metric,
         max_workers=max_workers,
         chunksize=chunksize,
+        **comparison_kwargs,
     )
 
-    return metric_agg, metric_individual
+    return pd.DataFrame(
+        metric_results.items(), columns=["keys", metric]
+    ).set_index("keys")
