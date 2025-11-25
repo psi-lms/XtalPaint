@@ -1,20 +1,22 @@
-import torch
-from torch_scatter import scatter_add
+"""TD-Paint Langevin corrector implementation."""
 
-from mattergen.diffusion.corruption.corruption import maybe_expand
 import mattergen.diffusion.sampling.predictors_correctors as pc
-from mattergen.diffusion.corruption.corruption import Corruption
+import torch
+from mattergen.diffusion.corruption import sde_lib
+from mattergen.diffusion.corruption.corruption import Corruption, maybe_expand
 from mattergen.diffusion.exceptions import IncompatibleSampler
-from mattergen.diffusion.wrapped.wrapped_sde import WrappedSDEMixin
 from mattergen.diffusion.sampling.predictors_correctors import (
     LangevinCorrector,
 )
-from mattergen.diffusion.corruption import sde_lib
+from mattergen.diffusion.wrapped.wrapped_sde import WrappedSDEMixin
+from torch_scatter import scatter_add
 
 SampleAndMean = tuple[torch.Tensor, torch.Tensor]
 
 
 class TDLangevinCorrector(LangevinCorrector):
+    """TD-Paint Langevin corrector."""
+
     def step_given_score(
         self,
         *,
@@ -25,6 +27,7 @@ class TDLangevinCorrector(LangevinCorrector):
         dt: torch.Tensor,
         mask: torch.LongTensor | None = None,
     ) -> SampleAndMean:
+        """Perform a single Langevin corrector step given the score."""
         if mask is None:
             mask = torch.zeros(x.shape[0])
         mask_bool = ~mask.bool()
@@ -32,14 +35,14 @@ class TDLangevinCorrector(LangevinCorrector):
         alpha = self.get_alpha(t, dt=dt)
         snr = self.snr
         noise = torch.randn_like(score)
-        breakpoint()
+
         grad_norm_square = (
             torch.square(score).reshape(score.shape[0], -1).sum(dim=1)
         )
         noise_norm_square = (
             torch.square(noise).reshape(noise.shape[0], -1).sum(dim=1)
         )
-        breakpoint()
+
         if batch_idx is None:
             grad_norm = grad_norm_square.sqrt().mean()
             breakpoint()
@@ -52,7 +55,7 @@ class TDLangevinCorrector(LangevinCorrector):
                     index=batch_idx[mask_bool],
                 )
             ).mean()
-            breakpoint()
+
             noise_norm = torch.sqrt(
                 scatter_add(
                     noise_norm_square[mask_bool],
@@ -60,7 +63,6 @@ class TDLangevinCorrector(LangevinCorrector):
                     index=batch_idx[mask_bool],
                 )
             ).mean()
-        breakpoint()
 
         # If gradient is zero (i.e., we are sampling from an improper
         # distribution that's flat over the whole of R^n)
@@ -73,7 +75,7 @@ class TDLangevinCorrector(LangevinCorrector):
         # Expand step size to batch structure (score and noise have
         # the same shape).
         step_size = maybe_expand(step_size, batch_idx, score)
-        breakpoint()
+
         # Perform update, using custom update for SO(3) diffusion on frames.
         mean = x + step_size * score
         x = mean + torch.sqrt(step_size * 2) * noise
@@ -94,6 +96,7 @@ class TDWrappedCorrectorMixin:
         dt: torch.Tensor,
         mask: torch.LongTensor | None,
     ) -> SampleAndMean:
+        """Perform a single corrector step with wrapping."""
         # mypy
         assert isinstance(self, pc.LangevinCorrector)
         _super = super()
@@ -111,8 +114,11 @@ class TDWrappedCorrectorMixin:
 
 
 class TDWrappedLangevinCorrector(TDWrappedCorrectorMixin, TDLangevinCorrector):
+    """TD-Paint Langevin corrector compatible with WrappedSDEs."""
+
     @classmethod
     def is_compatible(cls, corruption: Corruption):
+        """Check if the corrector is compatible with the corruption."""
         return isinstance(
             corruption, (sde_lib.VPSDE, sde_lib.VESDE)
         ) and isinstance(corruption, WrappedSDEMixin)

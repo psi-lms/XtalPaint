@@ -1,20 +1,23 @@
+"""TD-Paint loss functions for materials diffusion models."""
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
 from functools import partial
 from typing import Dict, Literal, Optional
-import torch
 
+import torch
 from mattergen.diffusion.corruption.sde_lib import SDE
 from mattergen.diffusion.data.batched_data import BatchedData
-from mattergen.diffusion.training.field_loss import aggregate_per_sample
-
 from mattergen.diffusion.losses import (
     SummedFieldLoss,
     denoising_score_matching,
 )
 from mattergen.diffusion.model_target import ModelTarget
-from mattergen.diffusion.training.field_loss import FieldLoss, d3pm_loss
+from mattergen.diffusion.training.field_loss import (
+    FieldLoss,
+    aggregate_per_sample,
+    d3pm_loss,
+)
 from mattergen.diffusion.wrapped.wrapped_normal_loss import (
     wrapped_normal_score,
 )
@@ -34,6 +37,7 @@ def wrapped_normal_loss_td(
     **_,
 ) -> torch.Tensor:
     """Compute the loss for a wrapped normal distribution.
+
     Compares the score of the wrapped normal distribution to the score of
     the score model.
     """
@@ -82,6 +86,8 @@ def wrapped_normal_loss_td(
 
 
 class TDMaterialsLoss(SummedFieldLoss):
+    """TD-Paint loss for materials diffusion models."""
+
     def __init__(
         self,
         reduce: Literal["sum", "mean"] = "mean",
@@ -91,6 +97,7 @@ class TDMaterialsLoss(SummedFieldLoss):
         include_atomic_numbers: bool = True,
         weights: Optional[Dict[str, float]] = None,
     ):
+        """Initialize the TDMaterialsLoss."""
         model_targets = {
             "pos": ModelTarget.score_times_std,
             "cell": ModelTarget.score_times_std,
