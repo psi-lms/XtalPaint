@@ -116,6 +116,7 @@ def _parallel_structure_comparison(
     **comparison_kwargs,
 ):
     structure_keys, sample_indices = get_structure_keys(inpainted_structures)
+
     inpainted_structures_grouped = {}
     for strct_key, sample_idx, inpainted_structures in zip(
         structure_keys, sample_indices, inpainted_structures.values()
@@ -123,6 +124,8 @@ def _parallel_structure_comparison(
         inpainted_structures_grouped.setdefault(strct_key, []).append(
             (sample_idx, inpainted_structures)
         )
+
+    grouped_keys = list(inpainted_structures_grouped.keys())
     # ToDo: Calculate both metrics at once? or at least in one job to avoid
     # uploads
     with ProcessPoolExecutor(
@@ -137,13 +140,13 @@ def _parallel_structure_comparison(
                 partial(
                     _comparison_per_key, metric=metric, **comparison_kwargs
                 ),
-                structure_keys,
+                grouped_keys,
                 chunksize=chunksize,
             ),
-            total=len(structure_keys),
+            total=len(grouped_keys),
         )
 
-        for key, metric_value in zip(structure_keys, pbar):
+        for key, metric_value in zip(grouped_keys, pbar):
             for sample_idx, match in metric_value:
                 if sample_idx is not None:
                     metric_individual[f"{key}_sample_{sample_idx}"] = match
