@@ -15,7 +15,7 @@ from pymatgen.core import Structure
 from torch.utils.data import DataLoader
 
 from dbcsi_inpainting.aiida.config_schema import InpaintingPipelineParams
-from dbcsi_inpainting.aiida.data import BatchedStructures, InpaintingStructure
+from dbcsi_inpainting.aiida.data import BatchedStructures
 from dbcsi_inpainting.generate_inpainting import (
     generate_reconstructed_structures,
 )
@@ -222,7 +222,7 @@ def _run_inpainting(
 
 
 def _prepare_structures(
-    structures: list[Structure | InpaintingStructure],
+    structures: list[Structure],
     batch_size: int = 64,
     seed: int = 1234,
 ) -> DataLoader:
@@ -300,7 +300,7 @@ def _extract_outputs(
 
 
 def run_inpainting_pipeline(
-    structures: dict[str, Structure | InpaintingStructure],
+    structures: dict[str, Structure],
     config: InpaintingPipelineParams | dict[str, Any],
 ) -> dict[str, Any]:
     """Run the inpainting experiment using MatterGen.
@@ -336,7 +336,7 @@ def run_inpainting_pipeline(
 
 
 def run_mpi_parallel_inpainting_pipeline(
-    structures: dict[str, Structure | InpaintingStructure],
+    structures: dict[str, Structure],
     config: InpaintingPipelineParams | dict[str, Any],
 ) -> dict[str, Any] | None:
     """Run the inpainting experiment using MatterGen with MPI parallelization.
