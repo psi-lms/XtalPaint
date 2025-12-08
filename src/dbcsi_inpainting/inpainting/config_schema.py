@@ -9,10 +9,10 @@ from pydantic.config import ConfigDict
 from pymatgen.core import Structure
 
 from dbcsi_inpainting.aiida.data import (
-    BatchedStructures,
     BatchedStructuresData,
-    InpaintingStructure,
+    InpaintingStructureData,
 )
+from dbcsi_inpainting.data import BatchedStructures
 
 
 class RelaxParameters(BaseModel):
@@ -129,7 +129,7 @@ class InpaintingWorkGraphConfig(BaseModel):
     """Top-level configuration for a DBCSI inpainting workflow."""
 
     structures: (
-        dict[str, Structure | InpaintingStructure]
+        dict[str, Structure | InpaintingStructureData]
         | BatchedStructures
         | BatchedStructuresData
     )
@@ -177,7 +177,8 @@ class InpaintingWorkGraphConfig(BaseModel):
             raise TypeError("All keys in the dictionary must be strings")
         if not all(
             isinstance(
-                s, (orm.StructureData, Structure, Atoms, InpaintingStructure)
+                s,
+                (orm.StructureData, Structure, Atoms, InpaintingStructureData),
             )
             for s in structures.values()
         ):
@@ -199,14 +200,16 @@ class InpaintingWorkGraphConfig(BaseModel):
         """Validate inputs for inpainting candidates.
 
         Ensure that 'gen_inpainting_candidates_params' is provided when
-        structures are not already InpaintingStructure instances.
+        structures are not already InpaintingStructureData instances.
         """
         values = (
             list(cfg.structures.values())
             if isinstance(cfg.structures, dict)
             else cfg.structures.get_structures(strct_type="pymatgen")
         )
-        if not all(isinstance(s, InpaintingStructure) for s in values):
+        if not all(
+            isinstance(s, (InpaintingStructureData, Structure)) for s in values
+        ):
             if cfg.gen_inpainting_candidates_params is None:
                 raise ValueError(
                     "If structures are not InpaintingStructure objects, "
@@ -234,4 +237,4 @@ class InpaintingWorkGraphConfig(BaseModel):
             if isinstance(self.structures, dict)
             else self.structures.get_structures(strct_type="pymatgen")
         )
-        return all(isinstance(s, InpaintingStructure) for s in structures)
+        return all(isinstance(s, InpaintingStructureData) for s in structures)
