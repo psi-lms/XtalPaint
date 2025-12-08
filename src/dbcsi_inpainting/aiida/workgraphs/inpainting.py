@@ -192,14 +192,11 @@ def get_inpainting_wg(
                     },
                     code=orm.load_code(code_label) if code_label else None,
                 )
-                evaluation_results[task_name].update(
+                evaluation_results.setdefault(task_name, {}).update(
                     {
-                        f"{metric}_agg": wg.tasks[
-                            f"evaluate_{metric}_inpainting_{task_name}"
-                        ].outputs["metric_agg"],
-                        f"{metric}_individual": wg.tasks[
-                            f"evaluate_{metric}_inpainting_{task_name}"
-                        ].outputs["metric_individual"],
+                        "metric": wg.tasks[
+                            f"evaluate_inpainting_{metric}_{task_name}"
+                        ].outputs["metric_results"],
                     }
                 )
         wg.outputs.evaluation_results = evaluation_results
