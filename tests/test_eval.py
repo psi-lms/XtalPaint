@@ -1,6 +1,7 @@
 """Tests for the eval module."""
 
 import numpy as np
+import pandas as pd
 import pytest
 from ase.io import read
 from pymatgen.core.structure import Structure
@@ -125,13 +126,13 @@ class TestEvaluateInpainting:
         inpainted = {"strct_1": simple_structure}
         reference = {"strct_1": simple_structure}
 
-        agg, individual = evaluate_inpainting(
+        df = evaluate_inpainting(
             inpainted, reference, metric="match", max_workers=1
         )
 
-        assert "strct_1" in agg
-        assert agg["strct_1"] == [True]
-        assert individual["strct_1"] is True
+        assert isinstance(df, pd.DataFrame)
+        assert "strct_1" in df.index
+        assert df.loc["strct_1", "match"].item() is True
 
     def test_non_matching_structures(
         self, simple_structure, different_structure
@@ -140,26 +141,27 @@ class TestEvaluateInpainting:
         inpainted = {"strct_1": different_structure}
         reference = {"strct_1": simple_structure}
 
-        agg, individual = evaluate_inpainting(
+        df = evaluate_inpainting(
             inpainted, reference, metric="match", max_workers=1
         )
 
-        assert "strct_1" in agg
-        assert agg["strct_1"] == [False]
-        assert individual["strct_1"] is False
+        assert isinstance(df, pd.DataFrame)
+        assert "strct_1" in df.index
+        assert df.loc["strct_1", "match"].item() is False
 
     def test_rmsd_metric(self, simple_structure, perturbed_structure):
         """Test evaluation using RMSD metric."""
         inpainted = {"strct_1": perturbed_structure}
         reference = {"strct_1": simple_structure}
 
-        agg, individual = evaluate_inpainting(
+        df = evaluate_inpainting(
             inpainted, reference, metric="rmsd", max_workers=1
         )
 
-        assert "strct_1" in agg
-        assert isinstance(agg["strct_1"][0], float)
-        assert agg["strct_1"][0] > 0.0
+        assert isinstance(df, pd.DataFrame)
+        assert "strct_1" in df.index
+        assert isinstance(df.loc["strct_1", "rmsd"], float)
+        assert df.loc["strct_1", "rmsd"] > 0.0
 
     def test_multiple_samples(self, simple_structure, perturbed_structure):
         """Test evaluation with multiple samples per structure."""
@@ -169,27 +171,27 @@ class TestEvaluateInpainting:
         }
         reference = {"strct_1": simple_structure}
 
-        agg, individual = evaluate_inpainting(
+        df = evaluate_inpainting(
             inpainted, reference, metric="match", max_workers=1
         )
 
-        assert "strct_1" in agg
-        assert len(agg["strct_1"]) == 2
-        assert "strct_1_sample_0" in individual
-        assert "strct_1_sample_1" in individual
+        assert isinstance(df, pd.DataFrame)
+        assert "strct_1_sample_0" in df.index
+        assert "strct_1_sample_1" in df.index
+        assert len(df) == 2
 
     def test_nan_structure(self, simple_structure, nan_structure):
         """Test evaluation with NaN structure."""
         inpainted = {"strct_1": nan_structure}
         reference = {"strct_1": simple_structure}
 
-        agg, individual = evaluate_inpainting(
+        df = evaluate_inpainting(
             inpainted, reference, metric="match", max_workers=1
         )
 
-        assert "strct_1" in agg
-        assert agg["strct_1"][0] is None
-        assert individual["strct_1"] is None
+        assert isinstance(df, pd.DataFrame)
+        assert "strct_1" in df.index
+        assert pd.isna(df.loc["strct_1", "match"])
 
     def test_mismatched_keys(self, simple_structure):
         """Test that mismatched keys raise ValueError."""
@@ -209,17 +211,17 @@ class TestEvaluateInpainting:
         base_keys = [k.rsplit("_sample_", 1)[0] for k in subset_keys]
         inpainted = {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)}
 
-        agg, individual = evaluate_inpainting(
+        df = evaluate_inpainting(
             inpainted,
             {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)},
             metric="match",
             max_workers=2,
         )
 
+        assert isinstance(df, pd.DataFrame)
         # All should match since they're identical
         for key in base_keys:
-            assert agg[key] == [True]
-            assert individual[key] is True
+            assert df.loc[key, "match"].item() is True
 
     def test_real_structures_rmsd(self, reference_structures):
         """Test RMSD metric with real structures."""
@@ -230,17 +232,17 @@ class TestEvaluateInpainting:
         reference = {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)}
         inpainted = {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)}
 
-        agg, individual = evaluate_inpainting(
+        df = evaluate_inpainting(
             inpainted,
             reference,
             metric="rmsd",
             max_workers=1,
         )
 
+        assert isinstance(df, pd.DataFrame)
         # RMSD should be close to 0 for identical structures
         for key in base_keys:
-            assert agg[key][0] == pytest.approx(0.0, abs=1e-3)
-            assert individual[key] == pytest.approx(0.0, abs=1e-3)
+            assert df.loc[key, "rmsd"] == pytest.approx(0.0, abs=1e-3)
 
     def test_parallel_workers(self, reference_structures):
         """Test evaluation with multiple workers."""
@@ -250,7 +252,7 @@ class TestEvaluateInpainting:
         reference = {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)}
         inpainted = {base_keys[i]: reference_structures[k] for i, k in enumerate(subset_keys)}
 
-        agg, individual = evaluate_inpainting(
+        df = evaluate_inpainting(
             inpainted,
             reference,
             metric="match",
@@ -258,7 +260,8 @@ class TestEvaluateInpainting:
             chunksize=3,
         )
 
+        assert isinstance(df, pd.DataFrame)
         # All should match
-        assert len(agg) == len(base_keys)
+        assert len(df) == len(base_keys)
         for key in base_keys:
-            assert agg[key] == [True]
+            assert df.loc[key, "match"].item() is True
