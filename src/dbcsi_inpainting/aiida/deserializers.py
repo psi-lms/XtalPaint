@@ -1,3 +1,5 @@
+"""Deserializers for AiiDA data types in DBCSI inpainting."""
+
 from dbcsi_inpainting.aiida.data import (
     BatchedStructures,
     BatchedStructuresData,

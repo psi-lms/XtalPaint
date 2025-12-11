@@ -18,7 +18,7 @@ from dbcsi_inpainting.data import BatchedStructures
 class RelaxParameters(BaseModel):
     """Configuration for the relaxation stage."""
 
-    load_path: str = None
+    load_path: str | None = None
     fmax: float = 0.05
     elements_to_relax: Optional[list[str]] = Field(
         default=None,
