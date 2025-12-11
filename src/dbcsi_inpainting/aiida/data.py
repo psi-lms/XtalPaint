@@ -1,19 +1,20 @@
 """Module defining custom AiiDA datatypes for inpainting of structures."""
 
-import numpy as np
-from aiida.orm import Data, StructureData, QueryBuilder, ProcessNode
-from aiida_pythonjob import pyfunction
+import io
+import tempfile
 
-from pymatgen.core import Structure
 import ase
 import ase.io
-from pymatgen.io.ase import AseAtomsAdaptor
-import io
-from disk_objectstore.utils import PackedObjectReader
-from dbcsi_inpainting.data import BatchedStructures
-import tempfile
+import numpy as np
 import pandas as pd
 from aiida.common import NotExistent
+from aiida.orm import Data, ProcessNode, QueryBuilder, StructureData
+from aiida_pythonjob import pyfunction
+from disk_objectstore.utils import PackedObjectReader
+from pymatgen.core import Structure
+from pymatgen.io.ase import AseAtomsAdaptor
+
+from dbcsi_inpainting.data import BatchedStructures
 
 __all__ = (
     "InpaintingStructureData",

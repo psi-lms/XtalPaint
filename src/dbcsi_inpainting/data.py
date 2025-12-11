@@ -1,7 +1,7 @@
 """Module defining custom datatypes for inpainting of structures."""
 
-from pymatgen.core import Structure
 import ase
+from pymatgen.core import Structure
 from pymatgen.io.ase import AseAtomsAdaptor
 
 __all__ = (
