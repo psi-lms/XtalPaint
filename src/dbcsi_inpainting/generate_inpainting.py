@@ -38,7 +38,7 @@ def draw_samples_from_sampler(
     properties_to_condition_on: TargetProperty | None = None,
     record_trajectories: bool = True,
     fix_cell: bool = True,
-) -> list[Structure]:
+) -> tuple[list[Structure], list[BatchedStructures], list[BatchedStructures]]:
     """Draw samples from a given sampler."""
     # Dict
     properties_to_condition_on = properties_to_condition_on or {}
@@ -184,7 +184,7 @@ class CrystalInpaintingGenerator(CrystalGenerator):
 def generate_reconstructed_structures(
     structures_to_reconstruct: DataLoader,
     pretrained_name: PRETRAINED_MODEL_NAME | None = "mattergen_base",
-    model_path: str = None,
+    model_path: str | None = None,
     batch_size: int = 10,
     num_batches: int = 1,
     config_overrides: list[str] | None = None,

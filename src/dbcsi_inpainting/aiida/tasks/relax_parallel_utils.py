@@ -1,7 +1,9 @@
 """Utilities for relaxation tasks using MPI parallelization."""
 
-import torch
 import warnings
+
+import torch
+
 from dbcsi_inpainting.utils.relaxation_utils import relax_structures
 
 
@@ -11,7 +13,8 @@ def split_structures_by_len(
     """Split structures into chunks based on their lengths.
 
     Return a list of lists, where each inner list is a chunk of structures.
-    Moreover, return a list of lists of indices corresponding to the structures in each chunk.
+    Moreover, return a list of lists of indices corresponding to the structures
+    in each chunk.
     """
     if not structures:
         return [], []
