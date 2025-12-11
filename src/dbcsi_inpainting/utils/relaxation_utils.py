@@ -1,14 +1,13 @@
-# Copyright (c) Microsoft Corporation.
-# Licensed under the MIT License.
+"""Utility functions for relaxing atomic structures using various MLIPs."""
 
 import numpy as np
+import tqdm
 from ase import Atoms
 from ase.calculators.calculator import Calculator
-from pymatgen.core import Structure
-from pymatgen.io.ase import AseAtomsAdaptor
 from ase.constraints import FixAtoms
 from ase.optimize import BFGS, FIRE
-import tqdm
+from pymatgen.core import Structure
+from pymatgen.io.ase import AseAtomsAdaptor
 
 
 def relax_atoms_mattersim(
@@ -17,6 +16,18 @@ def relax_atoms_mattersim(
     load_path: str = None,
     **kwargs,
 ) -> tuple[list[Atoms], np.ndarray]:
+    """Relax Atoms using MatterSim's batched relaxer.
+
+    Args:
+        atoms (list[Atoms]): The Atoms to be relaxed.
+        device (str): cuda or cpu.
+        load_path (str, optional): Path to the MatterSim checkpoint.
+            Defaults to None.
+        **kwargs: Additional keyword arguments for relaxation.
+
+    Returns:
+        tuple[list[Atoms], np.ndarray]: Relaxed Atoms and their total energies.
+    """
     from mattersim.applications.batch_relax import BatchRelaxer
     from mattersim.forcefield.potential import Potential
 
@@ -41,6 +52,7 @@ def _relax_atoms_mlip(
     filter: str = None,
     **kwargs,
 ) -> float:
+    """Relax Atoms using specified MLIP and optimizer."""
     if filter is not None:
         raise NotImplementedError("Filter not implemented yet.")
 
@@ -60,6 +72,7 @@ def _load_calculator(
     load_path: str | None,
     default_dtype: str,
 ) -> Calculator:
+    """Load the appropriate ASE calculator based on the MLIP specified."""
     if mlip == "mace":
         try:
             from mace.calculators import mace_mp
@@ -100,6 +113,7 @@ def _run_relaxations(
     return_final_forces: bool,
     **relax_kwargs,
 ):
+    """Run relaxations on a list of Atoms using the specified calculator."""
     relaxed_atoms = []
     final_energies = []
     initial_energies = [] if return_initial_energies else None
@@ -145,7 +159,7 @@ def _run_relaxations(
     )
 
 
-def relax_atoms_mlips(
+def _relax_atoms_mlips(
     atoms: list[Atoms],
     mlip: str,
     device: str,
@@ -156,6 +170,7 @@ def relax_atoms_mlips(
     return_final_forces: bool = False,
     **kwargs,
 ):
+    """Relax Atoms using specified MLIP."""
     optimizer = kwargs.pop("optimizer", "BFGS")
     max_n_steps = kwargs.pop("max_n_steps", 500)
     fmax = kwargs.pop("fmax", 0.05)
@@ -169,7 +184,8 @@ def relax_atoms_mlips(
             )
         ):
             raise ValueError(
-                "mattersim relaxation does not support returning initial/final energies/forces.\n"
+                "mattersim relaxation does not support "
+                "returning initial/final energies/forces.\n"
                 "Run them separately after relaxation if needed."
             )
         relaxed_atoms, total_energies = relax_atoms_mattersim(
@@ -206,14 +222,51 @@ def relax_atoms_mlips(
 def relax_structures(
     structures: Structure | list[Structure],
     device: str,
-    mlip: str = "mattersim",
+    mlip: str,
     load_path: str = None,
     elements_to_relax: list[str] = None,
     return_initial_energies: bool = False,
     return_initial_forces: bool = False,
     return_final_forces: bool = False,
     **kwargs,
-) -> tuple[list[Structure], np.ndarray]:
+) -> tuple[
+    list[Structure],
+    np.ndarray,
+    np.ndarray | None,
+    np.ndarray | None,
+    np.ndarray | None,
+]:
+    """Relax structures using MLIPs.
+
+    Args:
+        structures (Structure | list[Structure]): Structure or list of
+            Structures to relax.
+        device (str): Device to run the relaxation on, e.g., 'cpu' or 'cuda'.
+        mlip (str): MLIP to use for relaxation.
+        load_path (str, optional): Path to load the MLIP model from.
+            Defaults to None.
+        elements_to_relax (list[str], optional): List of element symbols to
+            relax. Defaults to None.
+        return_initial_energies (bool, optional): Whether to return initial
+            energies. Defaults to False.
+        return_initial_forces (bool, optional): Whether to return initial
+            forces. Defaults to False.
+        return_final_forces (bool, optional): Whether to return final
+            forces. Defaults to False.
+        **kwargs: Additional keyword arguments for relaxation.
+
+    Returns:
+        tuple[
+            list[Structure], np.ndarray, np.ndarray|None, np.ndarray|None,
+            np.ndarray|None
+            ]:
+            - List of relaxed Structures.
+            - Numpy array of total energies after relaxation.
+            - Numpy array of initial energies before relaxation (if requested).
+            - Numpy array of initial max forces before relaxation
+                (if requested).
+            - Numpy array of final max forces after relaxation (if requested).
+    """
     if isinstance(structures, Structure):
         structures = [structures]
 
@@ -232,7 +285,7 @@ def relax_structures(
         initial_energies,
         initial_forces,
         final_forces,
-    ) = relax_atoms_mlips(
+    ) = _relax_atoms_mlips(
         atoms,
         device=device,
         load_path=load_path,
