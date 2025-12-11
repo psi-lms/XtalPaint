@@ -21,7 +21,7 @@ from dbcsi_inpainting.generate_inpainting import (
 )
 from dbcsi_inpainting.utils.data_utils import create_dataloader
 
-DBSCI_BASE = "dbcsi_inpainting.custom_predictor_corrector"
+DBSCI_BASE = "dbcsi_inpainting.predictor_corrector"
 
 GUIDED_PREDICTOR_CORRECTOR_MAPPING = {
     "baseline": (
@@ -35,7 +35,7 @@ GUIDED_PREDICTOR_CORRECTOR_MAPPING = {
         f"{DBSCI_BASE}.AdditionalDataPredictorCorrector.from_pl_module"
     ),
     "repaint-v1": (
-        f"{DBSCI_BASE}.CustomGuidedPredictorCorrectorRePaint.from_pl_module"
+        f"{DBSCI_BASE}.RePaintLegacyGuidedPredictorCorrector.from_pl_module"
     ),
     "repaint-v2": (
         f"{DBSCI_BASE}.RePaintV2GuidedPredictorCorrector.from_pl_module"
