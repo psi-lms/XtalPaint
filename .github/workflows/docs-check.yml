@@ -1,15 +1,14 @@
-name: Deploy MkDocs site to GitHub Pages
+name: Check MkDocs build
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-
-permissions:
-  contents: write
+      - develop
+      - "*"   # or list whatever branches you care about
 
 jobs:
-  deploy:
+  build-docs:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,12 +18,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.10"
 
       - name: Install uv
         run: pip install uv
 
-      - name: Install docs dependencies with uv
+      - name: Install docs dependencies
         run: uv pip install ".[docs]"
 
       - name: Copy example notebooks into docs
@@ -32,6 +31,5 @@ jobs:
           mkdir -p docs/examples
           cp -r examples/*.ipynb docs/examples/
 
-      - name: Build and deploy MkDocs site
-        run: |
-          mkdocs gh-deploy --force --clean --strict
+      - name: Build MkDocs site (no deploy)
+        run: mkdocs build --clean --strict
