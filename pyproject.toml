@@ -35,6 +35,12 @@ dev = [
 aiida = [
     "aiida-workgraph==0.5.2",
 ]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-jupyter>=0.25.1",
+    "mkdocs-material>=9.7.0",
+    "nbconvert>=7.16.6",
+]
 
 [tool.setuptools]
 packages = ["dbcsi_inpainting"]
