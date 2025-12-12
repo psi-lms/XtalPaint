@@ -24,7 +24,7 @@ jobs:
         run: pip install uv
 
       - name: Install docs dependencies
-        run: uv sync --locked --all-extras --dev --docs
+        run: uv sync --locked --all-extras --dev
 
       - name: Copy example notebooks into docs
         run: |
