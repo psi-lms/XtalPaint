@@ -1,0 +1,35 @@
+name: Check MkDocs build
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+      - "*"   # or list whatever branches you care about
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install docs dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Copy example notebooks into docs
+        run: |
+          mkdir -p docs/examples
+          cp -r examples/*.ipynb docs/examples/
+
+      - name: Build MkDocs site (no deploy)
+        run: uv run mkdocs build --clean --strict
