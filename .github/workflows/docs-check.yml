@@ -32,4 +32,4 @@ jobs:
           cp -r examples/*.ipynb docs/examples/
 
       - name: Build MkDocs site (no deploy)
-        run: mkdocs build --clean --strict
+        run: uv run mkdocs build --clean --strict
