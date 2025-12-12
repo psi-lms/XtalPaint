@@ -34,4 +34,4 @@ jobs:
 
       - name: Build and deploy MkDocs site
         run: |
-          mkdocs gh-deploy --force --clean --strict
+          uv run mkdocs gh-deploy --force --clean --strict
