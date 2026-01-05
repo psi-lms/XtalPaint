@@ -6,29 +6,22 @@
 # XtalPaint – A framework for crystal structure inpainting based on diffusion models
 
 ## Installation
+The recommended way of installing the package is using uv: https://docs.astral.sh/uv/getting-started/installation/
+
+```bash
+git clone https://github.com/t-reents/XtalPaint.git
+cd XtalPaint/
+
+uv pip install .
+```
+
+This will install the default version. If you want to use it in combination with [AiiDA](https://aiida.readthedocs.io/projects/aiida-core/en/stable/), please also install the optional dependencies:
+
+```bash
+uv pip install .[aiida]
+```
 
 ## Example
-
-## Development Setup
-
-This repository uses pre-commit hooks to ensure code quality and consistency.
-
-### Setting up pre-commit
-
-1. Install development dependencies:
-   ```bash
-   pip install -e ".[dev]"
-   ```
-
-2. Install pre-commit hooks:
-   ```bash
-   pre-commit install
-   ```
-
-3. (Optional) Run pre-commit on all files:
-   ```bash
-   pre-commit run --all-files
-   ```
 
 ## Citation
 
