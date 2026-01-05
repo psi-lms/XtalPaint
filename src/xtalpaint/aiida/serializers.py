@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from aiida import orm
 
-from dbcsi_inpainting.aiida.data import (
+from xtalpaint.aiida.data import (
     BatchedStructures,
     BatchedStructuresData,
     PandasDataFrameData,

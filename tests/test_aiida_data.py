@@ -4,13 +4,13 @@ from aiida.orm import StructureData
 from ase import Atoms
 from pymatgen.core import Lattice, Structure
 
-from dbcsi_inpainting.aiida.data import (
+from xtalpaint.aiida.data import (
     BatchedStructures,
     BatchedStructuresData,
     InpaintingStructureData,
     extract_from_batched_structures,
 )
-from dbcsi_inpainting.data import convert_structure
+from xtalpaint.data import convert_structure
 
 
 @pytest.fixture

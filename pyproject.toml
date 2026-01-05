@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dbcsi-inpainting"
+name = "xtalpaint"
 version = "0.1.0"
 description = "Diffusion based crystal structure inpainting"
 authors = [{ name = "Timo Reents", email = "timo.reents@psi.ch" }]
@@ -19,11 +19,11 @@ dependencies = [
 ]
 
 [project.entry-points."aiida.data"]
-"pythonjob.dbcsi_inpainting.aiida.data.InpaintingStructureData" = "dbcsi_inpainting.aiida.data:InpaintingStructureData"
-"dbcsi_inpainting.BatchedStructuresData" = "dbcsi_inpainting.aiida.data:BatchedStructuresData"
-"dbcsi_inpainting.PandasDataFrameData" = "dbcsi_inpainting.aiida.data:PandasDataFrameData"
-"pythonjob.dbcsi_inpainting.aiida.data.BatchedStructures" = "dbcsi_inpainting.aiida.data:BatchedStructuresData"
-"pythonjob.pandas.core.frame.DataFrame" = "dbcsi_inpainting.aiida.data:PandasDataFrameData"
+"pythonjob.xtalpaint.aiida.data.InpaintingStructureData" = "xtalpaint.aiida.data:InpaintingStructureData"
+"xtalpaint.BatchedStructuresData" = "xtalpaint.aiida.data:BatchedStructuresData"
+"xtalpaint.PandasDataFrameData" = "xtalpaint.aiida.data:PandasDataFrameData"
+"pythonjob.xtalpaint.aiida.data.BatchedStructures" = "xtalpaint.aiida.data:BatchedStructuresData"
+"pythonjob.pandas.core.frame.DataFrame" = "xtalpaint.aiida.data:PandasDataFrameData"
 
 [project.optional-dependencies]
 dev = [
@@ -43,7 +43,7 @@ docs = [
 ]
 
 [tool.setuptools]
-packages = ["dbcsi_inpainting"]
+packages = ["xtalpaint"]
 package-dir = {"" = "src"}
 
 # Ruff configuration
@@ -57,7 +57,7 @@ lint.select = ["E", "F", "I", "D"]
 convention = "google"
 
 [tool.ruff.lint.isort]
-known-first-party = ["dbcsi_inpainting"]
+known-first-party = ["xtalpaint"]
 known-third-party = ["numpy", "torch", "pymatgen", "mattergen"]
 
 [tool.uv.sources]

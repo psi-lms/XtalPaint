@@ -7,7 +7,7 @@ from ase.io import read
 from pymatgen.core.structure import Structure
 from pymatgen.io.ase import AseAtomsAdaptor
 
-from dbcsi_inpainting.eval import (
+from xtalpaint.eval import (
     _check_for_nan,
     evaluate_inpainting,
     get_structure_keys,

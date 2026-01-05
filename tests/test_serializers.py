@@ -6,13 +6,13 @@ import numpy as np
 from pymatgen.core import Structure, Lattice
 from aiida.orm import StructureData, TrajectoryData
 
-from dbcsi_inpainting.aiida.serializers import (
+from xtalpaint.aiida.serializers import (
     pymatgen_to_structure_data,
     pymatgen_traj_to_aiida_traj,
     batched_structures_to_batched_structures_data,
     pandas_dataframe_to_pandas_dataframe_data,
 )
-from dbcsi_inpainting.aiida.data import (
+from xtalpaint.aiida.data import (
     BatchedStructures,
     BatchedStructuresData,
     PandasDataFrameData,

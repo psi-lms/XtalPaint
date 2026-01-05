@@ -1,4 +1,4 @@
-# Examples of using the DBCSI package
+# Examples of using the XtalPaint package
 
 
 ## Without using AiiDA
