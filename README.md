@@ -1,4 +1,13 @@
-# diffusion-based-crystal-structure-inpainting
+<p align="left">
+  <img src="docs/assets//XtalPaint-logo-horizontal.png" alt="XtalPaint logo" width="540">
+</p>
+
+
+# XtalPaint – A framework for crystal structure inpainting based on diffusion models
+
+## Installation
+
+## Example
 
 ## Development Setup
 
@@ -21,19 +30,32 @@ This repository uses pre-commit hooks to ensure code quality and consistency.
    pre-commit run --all-files
    ```
 
-### Code Quality Tools
+## Citation
 
-The pre-commit configuration includes:
-- **Black**: Code formatting
-- **isort**: Import sorting
-- **flake8**: Linting and style checks
-- **pydocstyle**: Docstring style checking (numpy convention)
-- **Basic checks**: Trailing whitespace, end-of-file, YAML/TOML/JSON validation
+If you find this project useful in your research, please consider citing:
 
-These tools will run automatically on git commits. You can also run them manually:
-```bash
-black src/
-isort src/
-flake8 src/
-pydocstyle src/
+```bibtex
+@article{your2024xtalpaint,
+  title={XtalPaint: A framework for crystal structure inpainting based on diffusion models},
+  author={Your Name and Collaborators},
+  journal={Journal Name},
+  year={2025},
+  publisher={Publisher}
+}
 ```
+
+## Acknowledgements
+
+The initial version of this project relies on and implements extensions to [`Mattergen`](https://github.com/microsoft/mattergen). Please also consider citing the corresponding publication:
+
+```bibtex
+@article{MatterGen2025,
+  author  = {Zeni, Claudio and Pinsler, Robert and Z{\"u}gner, Daniel and Fowler, Andrew and Horton, Matthew and Fu, Xiang and Wang, Zilong and Shysheya, Aliaksandra and Crabb{\'e}, Jonathan and Ueda, Shoko and Sordillo, Roberto and Sun, Lixin and Smith, Jake and Nguyen, Bichlien and Schulz, Hannes and Lewis, Sarah and Huang, Chin-Wei and Lu, Ziheng and Zhou, Yichi and Yang, Han and Hao, Hongxia and Li, Jielan and Yang, Chunlei and Li, Wenjie and Tomioka, Ryota and Xie, Tian},
+  journal = {Nature},
+  title   = {A generative model for inorganic materials design},
+  year    = {2025},
+  doi     = {10.1038/s41586-025-08628-5},
+}
+```
+
+All modules that are reused or adapted from MatterGen are clearly marked in the codebase.
