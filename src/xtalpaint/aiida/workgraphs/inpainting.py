@@ -93,16 +93,14 @@ def get_inpainting_wg(
             },
             serializers={
                 "pymatgen.core.structure.Structure": (
-                    "xtalpaint.aiida.serializers."
-                    "pymatgen_to_structure_data"
+                    "xtalpaint.aiida.serializers.pymatgen_to_structure_data"
                 ),
                 "xtalpaint.aiida.data.BatchedStructures": (
                     "xtalpaint.aiida.serializers."
                     "batched_structures_to_batched_structures_data"
                 ),
                 "pymatgen.core.trajectory.Trajectory": (
-                    "xtalpaint.aiida.serializers."
-                    "pymatgen_traj_to_aiida_traj"
+                    "xtalpaint.aiida.serializers.pymatgen_traj_to_aiida_traj"
                 ),
             },
             code=orm.load_code(code_label) if code_label else None,
