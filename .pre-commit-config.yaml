@@ -1,10 +1,4 @@
-# Pre-commit configuration for diffusion-based-crystal-structure-inpainting
-#
-# To use this configuration:
-# 1. Install pre-commit: pip install pre-commit
-# 2. Install formatting tools: pip install ruff
-# 3. Install hooks: pre-commit install
-# 4. Run on all files: pre-commit run --all-files
+exclude: ^docs/
 
 repos:
   # Pre-commit hooks for basic checks

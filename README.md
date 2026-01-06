@@ -29,13 +29,13 @@ If you find this project useful in your research, please consider citing:
 
 ```bibtex
 @misc{reents_2026_inpainting,
-      title={Score-based diffusion models for accurate crystal-structure inpainting and reconstruction of hydrogen positions}, 
+      title={Score-based diffusion models for accurate crystal-structure inpainting and reconstruction of hydrogen positions},
       author={Timo Reents and Arianna Cantarella and Marnik Bercx and Pietro Bonfà and Giovanni Pizzi},
       year={2026},
       eprint={2601.01959},
       archivePrefix={arXiv},
       primaryClass={cond-mat.mtrl-sci},
-      url={https://arxiv.org/abs/2601.01959}, 
+      url={https://arxiv.org/abs/2601.01959},
 }
 ```
 
