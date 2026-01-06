@@ -9,7 +9,7 @@ description = "Diffusion based crystal structure inpainting"
 authors = [{ name = "Timo Reents", email = "timo.reents@psi.ch" }]
 license = { file = "LICENSE" }
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = "==3.10.*"
 dependencies = [
     "ase>=3.25.0",
     "mattergen",
