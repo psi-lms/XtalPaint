@@ -35,12 +35,14 @@ This repository uses pre-commit hooks to ensure code quality and consistency.
 If you find this project useful in your research, please consider citing:
 
 ```bibtex
-@article{your2024xtalpaint,
-  title={XtalPaint: A framework for crystal structure inpainting based on diffusion models},
-  author={Your Name and Collaborators},
-  journal={Journal Name},
-  year={2025},
-  publisher={Publisher}
+@misc{reents_2026_inpainting,
+      title={Score-based diffusion models for accurate crystal-structure inpainting and reconstruction of hydrogen positions}, 
+      author={Timo Reents and Arianna Cantarella and Marnik Bercx and Pietro Bonfà and Giovanni Pizzi},
+      year={2026},
+      eprint={2601.01959},
+      archivePrefix={arXiv},
+      primaryClass={cond-mat.mtrl-sci},
+      url={https://arxiv.org/abs/2601.01959}, 
 }
 ```
 
