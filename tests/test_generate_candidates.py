@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 from pymatgen.core import Structure, Lattice
 from aiida.orm import StructureData
-from dbcsi_inpainting.inpainting.generate_candidates import (
+from xtalpaint.inpainting.generate_candidates import (
     _add_inpainting_sites,
     _structures_to_pymatgen,
     _prepare_inpainting_inputs,

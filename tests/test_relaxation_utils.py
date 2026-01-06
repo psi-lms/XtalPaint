@@ -8,7 +8,7 @@ from pymatgen.core import Lattice, Structure
 # Try to import dependencies, skip all tests if not available
 pytest.importorskip("mattersim", reason="MatterSim not available")
 
-from dbcsi_inpainting.utils.relaxation_utils import (
+from xtalpaint.utils.relaxation_utils import (
     _load_calculator,
     _relax_atoms_mlip,
     relax_structures,

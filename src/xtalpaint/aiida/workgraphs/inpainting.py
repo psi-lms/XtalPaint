@@ -6,17 +6,17 @@ from aiida import orm
 from aiida_workgraph import WorkGraph
 from pymatgen.core.structure import Structure
 
-from dbcsi_inpainting.aiida.data import (
+from xtalpaint.aiida.data import (
     BatchedStructures,
     BatchedStructuresData,
 )
-from dbcsi_inpainting.aiida.tasks.tasks import (
+from xtalpaint.aiida.tasks.tasks import (
     _aiida_generate_inpainting_candidates,
     _evaluate_inpainting_task,
     _inpainting_pipeline_task,
     _relaxation_task,
 )
-from dbcsi_inpainting.inpainting.config_schema import InpaintingWorkGraphConfig
+from xtalpaint.inpainting.config_schema import InpaintingWorkGraphConfig
 
 
 def get_inpainting_wg(
@@ -50,10 +50,10 @@ def get_inpainting_wg(
             },
             serializers={
                 "pymatgen.core.structure.Structure": (
-                    "dbcsi_inpainting.aiida.data.InpaintingStructure"
+                    "xtalpaint.aiida.data.InpaintingStructure"
                 ),
-                "dbcsi_inpainting.aiida.data.BatchedStructures": (
-                    "dbcsi_inpainting.aiida.serializers."
+                "xtalpaint.aiida.data.BatchedStructures": (
+                    "xtalpaint.aiida.serializers."
                     "batched_structures_to_batched_structures_data"
                 ),
             },
@@ -93,16 +93,14 @@ def get_inpainting_wg(
             },
             serializers={
                 "pymatgen.core.structure.Structure": (
-                    "dbcsi_inpainting.aiida.serializers."
-                    "pymatgen_to_structure_data"
+                    "xtalpaint.aiida.serializers.pymatgen_to_structure_data"
                 ),
-                "dbcsi_inpainting.aiida.data.BatchedStructures": (
-                    "dbcsi_inpainting.aiida.serializers."
+                "xtalpaint.aiida.data.BatchedStructures": (
+                    "xtalpaint.aiida.serializers."
                     "batched_structures_to_batched_structures_data"
                 ),
                 "pymatgen.core.trajectory.Trajectory": (
-                    "dbcsi_inpainting.aiida.serializers."
-                    "pymatgen_traj_to_aiida_traj"
+                    "xtalpaint.aiida.serializers.pymatgen_traj_to_aiida_traj"
                 ),
             },
             code=orm.load_code(code_label) if code_label else None,
@@ -235,14 +233,14 @@ def _add_full_relax_task(
         },
         serializers={
             "pymatgen.core.structure.Structure": (
-                "dbcsi_inpainting.aiida.serializers.pymatgen_to_structure_data"
+                "xtalpaint.aiida.serializers.pymatgen_to_structure_data"
             ),
-            "dbcsi_inpainting.aiida.data.BatchedStructures": (
-                "dbcsi_inpainting.aiida.serializers."
+            "xtalpaint.aiida.data.BatchedStructures": (
+                "xtalpaint.aiida.serializers."
                 "batched_structures_to_batched_structures_data"
             ),
             "pandas.core.frame.DataFrame": (
-                "dbcsi_inpainting.aiida.serializers."
+                "xtalpaint.aiida.serializers."
                 "pandas_dataframe_to_pandas_dataframe_data"
             ),
         },

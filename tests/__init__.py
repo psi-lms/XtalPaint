@@ -1,1 +1,1 @@
-"""Tests for dbcsi_inpainting package."""
+"""Tests for the XtalPaint package."""

@@ -29,7 +29,7 @@ from pymatgen.core.structure import Structure
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from dbcsi_inpainting.aiida.data import BatchedStructures
+from xtalpaint.aiida.data import BatchedStructures
 
 
 def draw_samples_from_sampler(

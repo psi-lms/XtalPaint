@@ -6,22 +6,22 @@ import pandas as pd
 from aiida_workgraph import task
 from pymatgen.core.structure import Structure
 
-from dbcsi_inpainting.aiida.data import (
+from xtalpaint.aiida.data import (
     BatchedStructures,
     BatchedStructuresData,
 )
-from dbcsi_inpainting.aiida.tasks.relax_parallel_utils import (
+from xtalpaint.aiida.tasks.relax_parallel_utils import (
     _relax_mpi_parallel,
 )
-from dbcsi_inpainting.eval import evaluate_inpainting
-from dbcsi_inpainting.inpainting.generate_candidates import (
+from xtalpaint.eval import evaluate_inpainting
+from xtalpaint.inpainting.generate_candidates import (
     generate_inpainting_candidates,
 )
-from dbcsi_inpainting.inpainting.inpainting_process import (
+from xtalpaint.inpainting.inpainting_process import (
     run_inpainting_pipeline,
     run_mpi_parallel_inpainting_pipeline,
 )
-from dbcsi_inpainting.utils.relaxation_utils import relax_structures
+from xtalpaint.utils.relaxation_utils import relax_structures
 
 
 @task(

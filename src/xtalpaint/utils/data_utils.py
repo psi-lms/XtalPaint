@@ -1,4 +1,4 @@
-"""Utility functions for data handling in DBCSI inpainting."""
+"""Utility functions for data handling in XtalPaint."""
 
 from functools import partial
 from typing import Callable, Sequence
