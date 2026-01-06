@@ -1,6 +1,6 @@
-"""Deserializers for AiiDA data types in DBCSI inpainting."""
+"""Deserializers for AiiDA data types in XtalPaint."""
 
-from dbcsi_inpainting.aiida.data import (
+from xtalpaint.aiida.data import (
     BatchedStructures,
     BatchedStructuresData,
 )

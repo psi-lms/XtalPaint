@@ -14,7 +14,7 @@ from disk_objectstore.utils import PackedObjectReader
 from pymatgen.core import Structure
 from pymatgen.io.ase import AseAtomsAdaptor
 
-from dbcsi_inpainting.data import BatchedStructures
+from xtalpaint.data import BatchedStructures
 
 __all__ = (
     "InpaintingStructureData",

@@ -1,4 +1,4 @@
-"""Pydantic schemas for configuring DBCSI inpainting workflows."""
+"""Pydantic schemas for configuring XtalPaint inpainting workflows."""
 
 from typing import Optional
 
@@ -8,11 +8,11 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic.config import ConfigDict
 from pymatgen.core import Structure
 
-from dbcsi_inpainting.aiida.data import (
+from xtalpaint.aiida.data import (
     BatchedStructuresData,
     InpaintingStructureData,
 )
-from dbcsi_inpainting.data import BatchedStructures
+from xtalpaint.data import BatchedStructures
 
 
 class RelaxParameters(BaseModel):
@@ -61,7 +61,7 @@ class InpaintingPipelineParams(BaseModel):
     @classmethod
     def validate_predictor_corrector(cls, v):
         """Validator to ensure 'predictor_corrector' is a supported key."""
-        from dbcsi_inpainting.inpainting.inpainting_process import (
+        from xtalpaint.inpainting.inpainting_process import (
             GUIDED_PREDICTOR_CORRECTOR_MAPPING,
         )
 
@@ -126,7 +126,7 @@ class EvalParameters(BaseModel):
 
 
 class InpaintingWorkGraphConfig(BaseModel):
-    """Top-level configuration for a DBCSI inpainting workflow."""
+    """Top-level configuration for a XtalPaint inpainting workflow."""
 
     structures: (
         dict[str, Structure | InpaintingStructureData]

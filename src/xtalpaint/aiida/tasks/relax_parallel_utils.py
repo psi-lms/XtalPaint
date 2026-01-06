@@ -4,7 +4,7 @@ import warnings
 
 import torch
 
-from dbcsi_inpainting.utils.relaxation_utils import relax_structures
+from xtalpaint.utils.relaxation_utils import relax_structures
 
 
 def split_structures_by_len(

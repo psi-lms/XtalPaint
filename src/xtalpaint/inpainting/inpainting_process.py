@@ -14,14 +14,14 @@ from mattergen.common.data.transform import (
 from pymatgen.core import Structure
 from torch.utils.data import DataLoader
 
-from dbcsi_inpainting.aiida.config_schema import InpaintingPipelineParams
-from dbcsi_inpainting.aiida.data import BatchedStructures
-from dbcsi_inpainting.generate_inpainting import (
+from xtalpaint.aiida.config_schema import InpaintingPipelineParams
+from xtalpaint.aiida.data import BatchedStructures
+from xtalpaint.generate_inpainting import (
     generate_reconstructed_structures,
 )
-from dbcsi_inpainting.utils.data_utils import create_dataloader
+from xtalpaint.utils.data_utils import create_dataloader
 
-DBSCI_BASE = "dbcsi_inpainting.predictor_corrector"
+XTALPAINT_BASE = "xtalpaint.predictor_corrector"
 
 GUIDED_PREDICTOR_CORRECTOR_MAPPING = {
     "baseline": (
@@ -29,18 +29,18 @@ GUIDED_PREDICTOR_CORRECTOR_MAPPING = {
         "GuidedPredictorCorrector.from_pl_module"
     ),
     "baseline-with-noise": (
-        f"{DBSCI_BASE}.CustomGuidedPredictorCorrector.from_pl_module"
+        f"{XTALPAINT_BASE}.CustomGuidedPredictorCorrector.from_pl_module"
     ),
     "baseline-store-scores": (
-        f"{DBSCI_BASE}.AdditionalDataPredictorCorrector.from_pl_module"
+        f"{XTALPAINT_BASE}.AdditionalDataPredictorCorrector.from_pl_module"
     ),
     "repaint-v1": (
-        f"{DBSCI_BASE}.RePaintLegacyGuidedPredictorCorrector.from_pl_module"
+        f"{XTALPAINT_BASE}.RePaintLegacyGuidedPredictorCorrector.from_pl_module"
     ),
     "repaint-v2": (
-        f"{DBSCI_BASE}.RePaintV2GuidedPredictorCorrector.from_pl_module"
+        f"{XTALPAINT_BASE}.RePaintV2GuidedPredictorCorrector.from_pl_module"
     ),
-    "TD": f"{DBSCI_BASE}.TDPaintGuidedPredictorCorrector.from_pl_module",
+    "TD": f"{XTALPAINT_BASE}.TDPaintGuidedPredictorCorrector.from_pl_module",
 }
 
 
@@ -80,7 +80,7 @@ def _get_sampling_config_overrides(
     if predictor_corrector == "TD":
         overrides.append(
             "sampler_partial.corrector_partials.pos._target_="
-            "dbcsi_inpainting.time_dependent.corrector.TDWrappedLangevinCorrector"
+            "xtalpaint.time_dependent.corrector.TDWrappedLangevinCorrector"
         )
 
     # Add cell fixing overrides
