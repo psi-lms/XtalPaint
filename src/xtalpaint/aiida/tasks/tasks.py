@@ -97,7 +97,7 @@ _evaluate_inpainting_task = task(
             "name": "reference_structures",
         },
     ],
-    outputs=[{"name": "metric_agg"}, {"name": "metric_individual"}],
+    outputs=[{"name": "metric_results"}],
 )(evaluate_inpainting)
 
 

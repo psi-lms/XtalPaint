@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = "==3.10.*"
 resolution-markers = [
     "sys_platform == 'linux'",
@@ -77,15 +77,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/ea/90/1c9c13f2fdfa96602
 [[package]]
 name = "aiida-pythonjob"
 version = "0.2.5"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/t-reents/aiida-pythonjob.git?rev=support%2Fxtalpaint-0.2.5#a0fa4eca62f52cd336974a3af6f45293ecd887c3" }
 dependencies = [
     { name = "aiida-core" },
     { name = "ase" },
     { name = "cloudpickle" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/70/6c/b3c7e3dc7263565aa96659dabf1e81740c824f4e17f87a2b2592f81aec65/aiida_pythonjob-0.2.5.tar.gz", hash = "sha256:3921fe68a675c1c43e6c76f91ccb68884138bbcbca3e62761127d35ce5a90879", size = 60599, upload-time = "2025-04-01T14:18:04.803Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/ba/2442d8ebd78fb57cbcc57d4aa8f4af3294745d41d2e8f717c51b4e82db7e/aiida_pythonjob-0.2.5-py3-none-any.whl", hash = "sha256:c02c9c0d36b3c3c1b0ba93922125e11a9f30460e3fdd076ce793ce99d405bfca", size = 31356, upload-time = "2025-04-01T14:18:03.842Z" },
 ]
 
 [[package]]
@@ -5069,6 +5065,8 @@ dependencies = [
 
 [package.optional-dependencies]
 aiida = [
+    { name = "aiida-core" },
+    { name = "aiida-pythonjob" },
     { name = "aiida-workgraph" },
 ]
 dev = [
@@ -5086,7 +5084,9 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiida-core", extras = ["tests"], marker = "extra == 'dev'", specifier = ">=2.7.1" },
+    { name = "aiida-core", marker = "extra == 'aiida'", specifier = "~=2.7.0" },
+    { name = "aiida-core", extras = ["tests"], marker = "extra == 'dev'", specifier = ">=2.7.0" },
+    { name = "aiida-pythonjob", marker = "extra == 'aiida'", git = "https://github.com/t-reents/aiida-pythonjob.git?rev=support%2Fxtalpaint-0.2.5" },
     { name = "aiida-workgraph", marker = "extra == 'aiida'", specifier = "==0.5.2" },
     { name = "ase", specifier = ">=3.25.0" },
     { name = "mattergen", git = "https://github.com/microsoft/mattergen?rev=v1.0.3" },
