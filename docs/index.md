@@ -1,6 +1,7 @@
-# DBCSI Documentation
+# XtalPaint – A framework for crystal structure inpainting based on diffusion models
 
-Welcome to the DBCSI Documentation.
+
+Welcome to the `XtalPaint` Documentation.
 
 ## Overview
 
@@ -23,7 +24,7 @@ Check out the examples on to run the inpainting pipeline:
 ## Installation
 
 ```bash
-git clone https://github.com/t-reents/DBCSI.git
+git clone https://github.com/t-reents/XtalPaint.git
 uv pip install .
 ```
 

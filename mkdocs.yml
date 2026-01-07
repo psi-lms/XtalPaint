@@ -1,8 +1,9 @@
-site_name: Diffusion Based Crystal Structure Inpainting (DBCSI)
-site_description: Documentation for DBCSI Inpainting project
+site_name: XtalPaint
+site_description: Documentation for XtalPaint
 site_author: Timo Reents
 
 theme:
+  logo: assets/XtalPaint-logo-horizontal.png
   name: material
   features:
     - navigation.tabs
@@ -55,4 +56,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/t-reents/dbcsi
+      link: https://github.com/t-reents/XtalPaint
+
+extra_css:
+  - stylesheets/extra.css
