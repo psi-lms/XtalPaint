@@ -4,7 +4,9 @@ from typing import Iterable
 
 import numpy as np
 from aiida.orm import StructureData
+from ase.atoms import Atoms
 from pymatgen.core import Structure
+from pymatgen.io.ase import AseAtomsAdaptor
 
 
 def _add_inpainting_sites(
@@ -43,6 +45,16 @@ def _structures_to_pymatgen(
                 s_pmt.properties["uuid"] = s.uuid
                 structures_pmt[key] = s_pmt
             return structures_pmt
+        elif isinstance(list(structures.values())[0], Atoms):
+            return {
+                k: AseAtomsAdaptor.get_structure(a)
+                for k, a in structures.items()
+            }
+        else:
+            raise TypeError(
+                "Individual structures must be ase.Atoms, pyamtgen.Structure "
+                "or aiida.StructureData objects."
+            )
     else:
         raise TypeError(
             "Input must be a list or dictionary of pymatgen Structure objects."
@@ -87,6 +99,7 @@ def structure_to_inpainting_candidates(
     num_inpaint_sites: int | tuple[int, int],
     element: str,
     num_samples: int = 1,
+    remove_existing_sites: bool = True,
 ) -> dict[str, Structure]:
     """Generate inpainting candidates for a single structure.
 
@@ -99,6 +112,9 @@ def structure_to_inpainting_candidates(
             sites.
         num_samples (int, optional): The number of samples to generate.
             Defaults to 1.
+        remove_existing_sites (bool, optional): Whether to remove existing
+            sites of the same chemical element as the one specified for
+            `element`. Default s to True.
 
     Raises:
         ValueError: If num_inpaint_sites is not valid.
@@ -122,13 +138,14 @@ def structure_to_inpainting_candidates(
     for i_sample in range(num_samples):
         for j in range(num_inpaint_sites[0], num_inpaint_sites[1] + 1):
             s_removed = structure.copy()
-            s_removed.remove_sites(
-                [
-                    i
-                    for i, site in enumerate(s_removed.sites)
-                    if site.specie.symbol == element
-                ]
-            )
+            if remove_existing_sites:
+                s_removed.remove_sites(
+                    [
+                        i
+                        for i, site in enumerate(s_removed.sites)
+                        if site.specie.symbol == element
+                    ]
+                )
             s_removed = _add_inpainting_sites(s_removed, j, element)
 
             label = strct_key
