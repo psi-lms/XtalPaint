@@ -19,7 +19,7 @@ from xtalpaint.aiida.tasks.tasks import (
 from xtalpaint.inpainting.config_schema import InpaintingWorkGraphConfig
 
 
-def get_inpainting_wg(
+def setup_inpainting_wg(
     inputs: InpaintingWorkGraphConfig,
 ) -> WorkGraph:
     """Create a WorkGraph for inpainting of crystal structures."""
@@ -39,23 +39,6 @@ def get_inpainting_wg(
                 "options": (
                     inputs.gen_inpainting_candidates_options or inputs.options
                 )
-            },
-            # ToDo: These serializers/deserializers can probably be removed as
-            # they are also registered as entry-points
-            deserializers={
-                "aiida.orm.nodes.data.structure.StructureData": (
-                    "aiida_pythonjob.data.deserializer."
-                    "structure_data_to_pymatgen"
-                )
-            },
-            serializers={
-                "pymatgen.core.structure.Structure": (
-                    "xtalpaint.aiida.data.InpaintingStructure"
-                ),
-                "xtalpaint.aiida.data.BatchedStructures": (
-                    "xtalpaint.aiida.serializers."
-                    "batched_structures_to_batched_structures_data"
-                ),
             },
         )
         inpainting_candidates = wg.tasks[
@@ -84,21 +67,7 @@ def get_inpainting_wg(
                     inputs.inpainting_pipeline_options or inputs.options
                 ),
             },
-            # ToDo: These serializers/deserializers can probably be
-            # removed as they are also registered as entry-points
-            deserializers={
-                "aiida.orm.nodes.data.structure.StructureData": (
-                    "aiida_pythonjob.data.deserializer.structure_data_to_pymatgen"
-                ),
-            },
             serializers={
-                "pymatgen.core.structure.Structure": (
-                    "xtalpaint.aiida.serializers.pymatgen_to_structure_data"
-                ),
-                "xtalpaint.aiida.data.BatchedStructures": (
-                    "xtalpaint.aiida.serializers."
-                    "batched_structures_to_batched_structures_data"
-                ),
                 "pymatgen.core.trajectory.Trajectory": (
                     "xtalpaint.aiida.serializers.pymatgen_traj_to_aiida_traj"
                 ),
@@ -184,7 +153,7 @@ def get_inpainting_wg(
                     reference_structures=inputs.structures,
                     metric=metric,
                     max_workers=inputs.evaluate_params.max_workers,
-                    name=f"evaluate_{metric}_inpainting_{task_name}",
+                    name=f"evaluate_inpainting_{metric}_{task_name}",
                     metadata={
                         "options": inputs.options or {},
                     },
@@ -224,24 +193,9 @@ def _add_full_relax_task(
         metadata={
             "options": options or {},
         },
-        # ToDo: These serializers/deserializers can probably be removed as they
-        # are also registered as entry-points
-        deserializers={
-            "aiida.orm.nodes.data.structure.StructureData": (
-                "aiida_pythonjob.data.deserializer.structure_data_to_pymatgen"
-            ),
-        },
         serializers={
             "pymatgen.core.structure.Structure": (
                 "xtalpaint.aiida.serializers.pymatgen_to_structure_data"
-            ),
-            "xtalpaint.aiida.data.BatchedStructures": (
-                "xtalpaint.aiida.serializers."
-                "batched_structures_to_batched_structures_data"
-            ),
-            "pandas.core.frame.DataFrame": (
-                "xtalpaint.aiida.serializers."
-                "pandas_dataframe_to_pandas_dataframe_data"
             ),
         },
         code=code,

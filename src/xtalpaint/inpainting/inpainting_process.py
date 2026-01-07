@@ -14,11 +14,11 @@ from mattergen.common.data.transform import (
 from pymatgen.core import Structure
 from torch.utils.data import DataLoader
 
-from xtalpaint.aiida.config_schema import InpaintingPipelineParams
 from xtalpaint.aiida.data import BatchedStructures
 from xtalpaint.generate_inpainting import (
     generate_reconstructed_structures,
 )
+from xtalpaint.inpainting.config_schema import InpaintingPipelineParams
 from xtalpaint.utils.data_utils import create_dataloader
 
 XTALPAINT_BASE = "xtalpaint.predictor_corrector"
@@ -178,6 +178,7 @@ def _run_inpainting(
     record_trajectories: bool = False,
     pretrained_name: str | None = None,
     model_path: str | None = None,
+    sampling_config_path: str | None = None,
 ) -> tuple[list[Structure], list, list | None]:
     """Run the inpainting process using MatterGen.
 
@@ -189,6 +190,8 @@ def _run_inpainting(
         record_trajectories: Whether to record trajectories.
         pretrained_name: Name of pretrained model, if any.
         model_path: Path to model checkpoint.
+        sampling_config_path: Path to the sampling config directory
+            for mattergen
 
     Returns:
         Tuple of (inpainted_structures, trajectories, mean_trajectories).
@@ -206,6 +209,7 @@ def _run_inpainting(
         pretrained_name=pretrained_name,
         record_trajectories=record_trajectories,
         fix_cell=fix_cell,
+        sampling_config_path=sampling_config_path,
     )
 
     if len(reconstructed_structures) == 2:

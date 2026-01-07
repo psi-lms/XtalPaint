@@ -42,7 +42,6 @@ class InpaintingModelParams(BaseModel):
     coordinates_snr: float
     n_corrector_steps: int
     batch_size: int
-    N_samples_per_structure: int
     n_resample_steps: Optional[int] = None
     jump_length: Optional[int] = None
 
@@ -56,6 +55,7 @@ class InpaintingPipelineParams(BaseModel):
     pretrained_name: Optional[str] = None
     model_path: Optional[str] = None
     record_trajectories: Optional[bool] = False
+    sampling_config_path: Optional[str] = None
 
     @field_validator("predictor_corrector")
     @classmethod

@@ -20,19 +20,19 @@ dependencies = [
 
 [project.entry-points."aiida.data"]
 "pythonjob.xtalpaint.aiida.data.InpaintingStructureData" = "xtalpaint.aiida.data:InpaintingStructureData"
-"xtalpaint.BatchedStructuresData" = "xtalpaint.aiida.data:BatchedStructuresData"
-"xtalpaint.PandasDataFrameData" = "xtalpaint.aiida.data:PandasDataFrameData"
-"pythonjob.xtalpaint.aiida.data.BatchedStructures" = "xtalpaint.aiida.data:BatchedStructuresData"
+"pythonjob.xtalpaint.data.BatchedStructures" = "xtalpaint.aiida.data:BatchedStructuresData"
 "pythonjob.pandas.core.frame.DataFrame" = "xtalpaint.aiida.data:PandasDataFrameData"
 
 [project.optional-dependencies]
 dev = [
-    "aiida-core[tests]>=2.7.1",
+    "aiida-core[tests]>=2.7.0",
     "pre-commit>=4.4.0",
     "pytest",
     "ruff>=0.14.4",
 ]
 aiida = [
+    "aiida-core~=2.7.0",
+    "aiida-pythonjob",
     "aiida-workgraph==0.5.2",
 ]
 docs = [
@@ -62,6 +62,7 @@ known-third-party = ["numpy", "torch", "pymatgen", "mattergen"]
 
 [tool.uv.sources]
 mattergen = { git = "https://github.com/microsoft/mattergen", rev = "v1.0.3" }
+aiida-pythonjob = { git = "https://github.com/t-reents/aiida-pythonjob.git", rev = "support/xtalpaint-0.2.5" }
 
 [tool.uv.extra-build-dependencies]
 torch-cluster = ["torch"]
