@@ -227,6 +227,14 @@ class TestStructureToInpaintingCandidates:
         assert "test_sample_0" in result
         assert "test_sample_1" in result
         assert "test_sample_2" in result
+        assert len(result["test_sample_1"]) == 4
+
+        # Test case when keeping existing sites
+        result = structure_to_inpainting_candidates(
+            simple_structure, "test", 2, "O", num_samples=1,
+            remove_existing_sites=False
+        )
+        assert len(result["test"]) == 6
 
     def test_range_and_samples(self, simple_structure):
         """Test with both range and multiple samples."""
