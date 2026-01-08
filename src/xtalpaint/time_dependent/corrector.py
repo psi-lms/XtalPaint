@@ -1,5 +1,10 @@
 """TD-Paint Langevin corrector implementation."""
 
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+# Adapted from https://github.com/microsoft/mattergen/blob/main/mattergen/diffusion/sampling/predictors_correctors.py
+# and https://github.com/microsoft/mattergen/blob/main/mattergen/diffusion/wrapped/wrapped_predictors_correctors.py
+
 import mattergen.diffusion.sampling.predictors_correctors as pc
 import torch
 from mattergen.diffusion.corruption import sde_lib

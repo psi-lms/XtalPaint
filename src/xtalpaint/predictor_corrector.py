@@ -1,5 +1,9 @@
 """Predictor-Corrector samplers with customizations for inpainting."""
 
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+# Adapted from https://github.com/microsoft/mattergen/blob/main/mattergen/diffusion/sampling/pc_sampler.py
+
 from __future__ import annotations
 
 from typing import Tuple, TypeVar

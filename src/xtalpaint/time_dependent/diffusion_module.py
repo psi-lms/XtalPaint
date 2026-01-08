@@ -1,5 +1,9 @@
 """TD-Paint Diffusion Module."""
 
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+# Adapted from https://github.com/microsoft/mattergen/blob/main/mattergen/diffusion/diffusion_module.py
+
 from typing import Callable, TypeVar
 
 import torch

@@ -1,5 +1,10 @@
 """Utility functions for relaxing atomic structures using various MLIPs."""
 
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+# Adapted from https://github.com/microsoft/mattergen/blob/main/mattergen/evaluation/utils/relaxation.py
+# only the first function, relax_atoms_mattersim, is adapted from mattergen
+
 import numpy as np
 import tqdm
 from ase import Atoms
