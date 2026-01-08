@@ -23,13 +23,14 @@ uv pip install .[aiida]
 
 ## Example
 
+The following animation shows the inpainting process of hydrogen sites in a host crystal structure.
+
 <p align="center">
-  <img src="./docs/assets/XtalPaint-example.gif" alt="XtalPaint example" style="max-width:10%;height:auto;">
+  <img src="./docs/assets/XtalPaint-example.gif" alt="XtalPaint example" width="300">
 </p>
 
 
-
-In the following, we show one example of how to use the inpainting models.
+In the following, we show one example of how to use the inpainting models yourself.
 More details can be found in the [documentation](https://t-reents.github.io/XtalPaint/) and the corresponding examples, including the relaxation steps and the evaluation of inpainted structures against references.
 
 ```python
