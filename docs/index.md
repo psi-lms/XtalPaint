@@ -25,7 +25,15 @@ Check out the examples on to run the inpainting pipeline:
 
 ```bash
 git clone https://github.com/t-reents/XtalPaint.git
+cd XtalPaint/
+
 uv pip install .
+```
+
+This will install the default version. If you want to use it in combination with [AiiDA](https://aiida.readthedocs.io/projects/aiida-core/en/stable/), please also install the optional dependencies:
+
+```bash
+uv pip install .[aiida]
 ```
 
 ## Acknowledgements
