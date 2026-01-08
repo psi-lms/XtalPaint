@@ -23,7 +23,9 @@ uv pip install .[aiida]
 
 ## Example
 
-<img src="./docs/assets/XtalPaint-example.gif"/>
+<p align="center">
+  <img src="./docs/assets/XtalPaint-example.gif" alt="XtalPaint example" style="max-width:40%;height:auto;">
+</p>
 
 
 
