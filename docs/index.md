@@ -24,7 +24,7 @@ Check out the examples on to run the inpainting pipeline:
 ## Installation
 
 ```bash
-git clone https://github.com/t-reents/XtalPaint.git
+git clone https://github.com/psi-lms/XtalPaint.git
 cd XtalPaint/
 
 uv pip install .

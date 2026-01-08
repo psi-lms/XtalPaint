@@ -11,7 +11,7 @@
 The recommended way of installing the package is using [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
 ```bash
-git clone https://github.com/t-reents/XtalPaint.git
+git clone https://github.com/psi-lms/XtalPaint.git
 cd XtalPaint/
 
 uv pip install .
@@ -37,7 +37,7 @@ The following animation shows the inpainting process of hydrogen sites in a host
 
 
 In the following, we show one example of how to use the inpainting models yourself.
-More details can be found in the [documentation](https://t-reents.github.io/XtalPaint/) and the corresponding examples, including the relaxation steps and the evaluation of inpainted structures against references.
+More details can be found in the [documentation](https://psi-lms.github.io/XtalPaint/) and the corresponding examples, including the relaxation steps and the evaluation of inpainted structures against references.
 
 ```python
 from ase.build import bulk

@@ -56,7 +56,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/t-reents/XtalPaint
+      link: https://github.com/psi-lms/XtalPaint
 
 extra_css:
   - stylesheets/extra.css
