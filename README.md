@@ -5,7 +5,7 @@
 
 # XtalPaint – A framework for crystal structure inpainting based on diffusion models
 
-`XtalPaint` is a Python package that provides tools to perform crystal structure inpainting, i.e. adding atomic sites to a given host structure, using score-based diffusion models. Here, we provide retrained versions of the [`Mattergen`](https://github.com/microsoft/mattergen) architecture and the building blocks to set up the inpainting workflows. The initial application in our latest work: [Score-based diffusion models for accurate crystal-structure inpainting and reconstruction of hydrogen positions](https://doi.org/10.48550/arXiv.2601.01959), focuses on adding missing hydrogen sites to inorganic crystal structures, but the framework can be adapted to other inpainting tasks as well, i.e. general crystal structure prediction based on given host structures (see other interesting works in the field, e.g. by [Zhong _et al._](https://pubs.rsc.org/en/content/articlehtml/2025/mh/d5mh00774g)).
+`XtalPaint` is a Python package that provides tools to perform crystal structure inpainting, i.e. adding atomic sites to a given host structure, using score-based diffusion models. Here, we provide retrained versions of the [`MatterGen`](https://github.com/microsoft/mattergen) architecture and the building blocks to set up the inpainting workflows. The initial application in our latest work: [Score-based diffusion models for accurate crystal-structure inpainting and reconstruction of hydrogen positions](https://doi.org/10.48550/arXiv.2601.01959), focuses on adding missing hydrogen sites to inorganic crystal structures, but the framework can be adapted to other inpainting tasks as well, i.e. general crystal structure prediction based on given host structures (see other interesting works in the field, e.g. by [Zhong _et al._](https://pubs.rsc.org/en/content/articlehtml/2025/mh/d5mh00774g)).
 
 ## Installation
 The recommended way of installing the package is using [uv](https://docs.astral.sh/uv/getting-started/installation/).
@@ -22,6 +22,10 @@ This will install the default version. If you want to use it in combination with
 ```bash
 uv pip install .[aiida]
 ```
+
+### Model checkpoints for retrained versions of MatterGen
+
+Model checkpoints for the retrained versions of MatterGen used in our work can be downloaded from [Hugging Face](https://huggingface.co/t-reents/XtalPaint). Currently, the repository contains the `pos-only` and `TD-pos-only` models discussed in the paper.
 
 ## Example
 
@@ -77,7 +81,6 @@ inpainted_structures = run_inpainting_pipeline(
         "sampling_config_path": None, # Potentially change it to point to the mattergen sampling config directory
     }
 )
-
 ```
 
 ## Citation
@@ -98,7 +101,7 @@ If you find this project useful in your research, please consider citing:
 
 ## Acknowledgements
 
-The initial version of this project relies on and implements extensions to [`Mattergen`](https://github.com/microsoft/mattergen). Please also consider citing the corresponding publication:
+The initial version of this project relies on and implements extensions to [`MatterGen`](https://github.com/microsoft/mattergen). Please also consider citing the corresponding publication:
 
 ```bibtex
 @article{MatterGen2025,
@@ -110,4 +113,4 @@ The initial version of this project relies on and implements extensions to [`Mat
 }
 ```
 
-All modules that are reused or adapted from [`Mattergen`](https://github.com/microsoft/mattergen) are clearly marked in the codebase.
+All modules that are reused or adapted from [`MatterGen`](https://github.com/microsoft/mattergen) are clearly marked in the codebase.
