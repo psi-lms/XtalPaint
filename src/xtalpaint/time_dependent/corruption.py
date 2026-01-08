@@ -1,5 +1,9 @@
 """TD-Paint corruption module."""
 
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+# Adapted from https://github.com/microsoft/mattergen/blob/main/mattergen/common/diffusion/corruption.py
+
 import torch
 from mattergen.diffusion.corruption.corruption import (
     B,

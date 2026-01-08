@@ -4,6 +4,11 @@ These objects and functions were taken from the original mattergen repository
 https://github.com/microsoft/mattergen and adapted for the inpainting task.
 """
 
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+# Adapted from https://github.com/microsoft/mattergen/blob/main/mattergen/generator.py
+# and https://github.com/microsoft/mattergen/blob/main/mattergen/scripts/generate.py
+
 from pathlib import Path
 from typing import Literal
 
