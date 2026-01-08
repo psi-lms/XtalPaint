@@ -1,6 +1,8 @@
 """TD-Paint loss functions for materials diffusion models."""
+
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+# Adapted from https://github.com/microsoft/mattergen/blob/main/mattergen/diffusion/wrapped/wrapped_normal_loss.py
 
 from functools import partial
 from typing import Dict, Literal, Optional
