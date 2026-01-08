@@ -36,6 +36,11 @@ This will install the default version. If you want to use it in combination with
 uv pip install .[aiida]
 ```
 
+### Model checkpoints for retrained versions of MatterGen
+
+Model checkpoints for the retrained versions of MatterGen used in our work can be downloaded from [Hugging Face](https://huggingface.co/t-reents/XtalPaint). Currently, the repository contains the `pos-only` and `TD-pos-only` models discussed in the paper.
+
+
 ## Acknowledgements
 
 This project is developed to perform crystal structure inpainting, currently on top of Microsoft's [MatterGen](https://github.com/microsoft/mattergen). Some parts of the codebase are adapted from MatterGen's implementation (as highlighted in the respective files).
