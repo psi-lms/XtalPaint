@@ -23,6 +23,9 @@ uv pip install .[aiida]
 
 ## Example
 
+<img src="./docs/assets/XtalPaint-example.gif"/>
+
+
 
 In the following, we show one example of how to use the inpainting models.
 More details can be found in the [documentation](https://t-reents.github.io/XtalPaint/) and the corresponding examples, including the relaxation steps and the evaluation of inpainted structures against references.
