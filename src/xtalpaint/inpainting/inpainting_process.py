@@ -14,7 +14,7 @@ from mattergen.common.data.transform import (
 from pymatgen.core import Structure
 from torch.utils.data import DataLoader
 
-from xtalpaint.aiida.data import BatchedStructures
+from xtalpaint.data import BatchedStructures
 from xtalpaint.generate_inpainting import (
     generate_reconstructed_structures,
 )
