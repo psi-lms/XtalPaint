@@ -1,0 +1,7 @@
+_target_: mattergen.diffusion.corruption.multi_corruption.MultiCorruption
+sdes:
+  pos:
+    _target_: xtalpaint.time_dependent.corruption.TDNumAtomsVarianceAdjustedWrappedVESDE
+    wrapping_boundary: 1.0
+    sigma_max: 5.0
+    limit_info_key: num_atoms
