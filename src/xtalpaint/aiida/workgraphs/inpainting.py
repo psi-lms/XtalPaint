@@ -79,7 +79,7 @@ def _add_inpainting_candidates_generation(
 def _add_inpainting_pipeline(
     wg: WorkGraph,
     inputs: InpaintingWorkGraphConfig,
-) -> WorkGraph:
+) -> None:
     """Add inpainting pipeline task to the workgraph."""
     inpainting_candidates = (
         wg.tasks["generate_inpainting_candidates"].outputs["candidates"]
