@@ -7,7 +7,6 @@ from aiida_workgraph import WorkGraph
 from pymatgen.core.structure import Structure
 
 from xtalpaint.aiida.data import (
-    BatchedStructures,
     BatchedStructuresData,
 )
 from xtalpaint.aiida.tasks.tasks import (
@@ -16,6 +15,7 @@ from xtalpaint.aiida.tasks.tasks import (
     _inpainting_pipeline_task,
     _relaxation_task,
 )
+from xtalpaint.data import BatchedStructures
 from xtalpaint.inpainting.config_schema import InpaintingWorkGraphConfig
 
 
@@ -23,101 +23,143 @@ def setup_inpainting_wg(
     inputs: InpaintingWorkGraphConfig,
 ) -> WorkGraph:
     """Create a WorkGraph for inpainting of crystal structures."""
+    possible_relaxation_tasks = {
+        "inpainted_constrained_relaxation": inputs.relax,
+        "unrelaxed_inpainted_full_relaxation": inputs.full_relax
+        and inputs.full_relax_wo_pre_relax,
+        "pre_relaxed_inpainted_full_relaxation": inputs.full_relax
+        and inputs.relax,
+    }
+
     wg = WorkGraph()
 
-    inpainting_candidates = inputs.structures
     if not inputs.is_inpainting_structures and inputs.run_inpainting:
-        wg.add_task(
-            "workgraph.pythonjob",
-            function=_aiida_generate_inpainting_candidates,
-            structures=inpainting_candidates,
-            n_inp=inputs.gen_inpainting_candidates_params.n_inp,
-            element=inputs.gen_inpainting_candidates_params.element,
-            num_samples=inputs.gen_inpainting_candidates_params.num_samples,
-            name="generate_inpainting_candidates",
-            metadata={
-                "options": (
-                    inputs.gen_inpainting_candidates_options or inputs.options
-                )
-            },
-        )
-        inpainting_candidates = wg.tasks[
-            "generate_inpainting_candidates"
-        ].outputs["candidates"]
-        wg.outputs.inpainting_candidates = inpainting_candidates
+        _add_inpainting_candidates_generation(wg, inputs)
+
+    if inputs.run_inpainting:
+        _add_inpainting_pipeline(wg, inputs)
+
+    if inputs.relax or inputs.full_relax:
+        _add_relaxation_tasks(wg, inputs)
+
+    if inputs.evaluate:
+        relaxation_tasks = [
+            k for k, v in possible_relaxation_tasks.items() if v
+        ]
+        _add_evaluation_tasks(wg, inputs, relaxation_tasks)
+
+    return wg
+
+
+def _add_inpainting_candidates_generation(
+    wg: WorkGraph,
+    inputs: InpaintingWorkGraphConfig,
+) -> tuple[WorkGraph, any]:
+    """Add inpainting candidates generation task to the workgraph."""
+    wg.add_task(
+        "workgraph.pythonjob",
+        function=_aiida_generate_inpainting_candidates,
+        structures=inputs.structures,
+        n_inp=inputs.gen_inpainting_candidates_params.n_inp,
+        element=inputs.gen_inpainting_candidates_params.element,
+        num_samples=inputs.gen_inpainting_candidates_params.num_samples,
+        name="generate_inpainting_candidates",
+        metadata={
+            "options": (
+                inputs.gen_inpainting_candidates_options or inputs.options
+            )
+        },
+    )
+
+    wg.outputs.inpainting_candidates = wg.tasks[
+        "generate_inpainting_candidates"
+    ].outputs["candidates"]
+
+
+def _add_inpainting_pipeline(
+    wg: WorkGraph,
+    inputs: InpaintingWorkGraphConfig,
+) -> WorkGraph:
+    """Add inpainting pipeline task to the workgraph."""
+    inpainting_candidates = (
+        wg.tasks["generate_inpainting_candidates"].outputs["candidates"]
+        if not inputs.is_inpainting_structures and inputs.run_inpainting
+        else inputs.structures
+    )
 
     code_label = inputs.inpainting_code_label or inputs.code_label
 
-    if inputs.run_inpainting:
-        wg.add_task(
-            "workgraph.pythonjob",
-            function=_inpainting_pipeline_task,
-            structures=inpainting_candidates,
-            config=inputs.inpainting_pipeline_params.model_dump(
-                exclude_none=True
+    wg.add_task(
+        "workgraph.pythonjob",
+        function=_inpainting_pipeline_task,
+        structures=inpainting_candidates,
+        config=inputs.inpainting_pipeline_params.model_dump(exclude_none=True),
+        usempi=(
+            inputs.inpainting_pipeline_options.get("withmpi", False)
+            if inputs.inpainting_pipeline_options
+            else False
+        ),
+        name="inpainting",
+        metadata={
+            "options": (inputs.inpainting_pipeline_options or inputs.options),
+        },
+        serializers={
+            "pymatgen.core.trajectory.Trajectory": (
+                "xtalpaint.aiida.serializers.pymatgen_traj_to_aiida_traj"
             ),
-            usempi=(
-                inputs.inpainting_pipeline_options.get("withmpi", False)
-                if inputs.inpainting_pipeline_options
-                else False
-            ),
-            name="inpainting",
-            metadata={
-                "options": (
-                    inputs.inpainting_pipeline_options or inputs.options
-                ),
-            },
-            serializers={
-                "pymatgen.core.trajectory.Trajectory": (
-                    "xtalpaint.aiida.serializers.pymatgen_traj_to_aiida_traj"
-                ),
-            },
-            code=orm.load_code(code_label) if code_label else None,
-        )
-        wg.outputs.inpainted_structures = wg.tasks["inpainting"].outputs[
-            "structures"
+        },
+        code=orm.load_code(code_label) if code_label else None,
+    )
+    wg.outputs.inpainted_structures = wg.tasks["inpainting"].outputs[
+        "structures"
+    ]
+    if inputs.inpainting_pipeline_params.record_trajectories:
+        wg.outputs.inpainted_trajectories = wg.tasks["inpainting"].outputs[
+            "trajectories"
         ]
-        if inputs.inpainting_pipeline_params.record_trajectories:
-            wg.outputs.inpainted_trajectories = wg.tasks["inpainting"].outputs[
-                "trajectories"
-            ]
-            if "mean_trajectories" in wg.tasks["inpainting"].outputs:
-                wg.outputs.inpainted_mean_trajectories = wg.tasks[
-                    "inpainting"
-                ].outputs["mean_trajectories"]
+        if "mean_trajectories" in wg.tasks["inpainting"].outputs:
+            wg.outputs.inpainted_mean_trajectories = wg.tasks[
+                "inpainting"
+            ].outputs["mean_trajectories"]
 
+
+def _add_relaxation_tasks(
+    wg: WorkGraph,
+    inputs: InpaintingWorkGraphConfig,
+) -> tuple[WorkGraph, list[str]]:
+    """Add relaxation tasks to the workgraph."""
     code_label = inputs.relax_code_label or inputs.code_label
     relax_kwargs = deepcopy(inputs.relax_kwargs.model_dump())
-    relaxation_tasks = []
+
+    inpainted_structures = (
+        wg.tasks["inpainting"].outputs["structures"]
+        if inputs.run_inpainting
+        else inputs.structures
+    )
+
     if inputs.relax:
         wg = _add_full_relax_task(
             wg=wg,
-            structures=wg.tasks["inpainting"].outputs["structures"]
-            if inputs.run_inpainting
-            else inputs.structures,
+            structures=inpainted_structures,
             relax_inputs=relax_kwargs,
             task_name="inpainted_constrained_relaxation",
             options=inputs.relax_options or inputs.options,
             code=orm.load_code(code_label) if code_label else None,
             as_graph_outputs=True,
         )
-        relaxation_tasks.append("inpainted_constrained_relaxation")
 
     if inputs.full_relax:
         relax_kwargs.pop("elements_to_relax", None)
         if inputs.full_relax_wo_pre_relax:
             wg = _add_full_relax_task(
                 wg=wg,
-                structures=wg.tasks["inpainting"].outputs["structures"]
-                if inputs.run_inpainting
-                else inputs.structures,
+                structures=inpainted_structures,
                 relax_inputs=relax_kwargs,
                 task_name="unrelaxed_inpainted_full_relaxation",
                 options=inputs.relax_options or inputs.options,
                 code=orm.load_code(code_label) if code_label else None,
                 as_graph_outputs=True,
             )
-            relaxation_tasks.append("unrelaxed_inpainted_full_relaxation")
 
         if inputs.relax:
             wg = _add_full_relax_task(
@@ -131,44 +173,45 @@ def setup_inpainting_wg(
                 code=orm.load_code(code_label) if code_label else None,
                 as_graph_outputs=True,
             )
-            relaxation_tasks.append("pre_relaxed_inpainted_full_relaxation")
 
-    if inputs.evaluate:
-        code_label = inputs.evaluate_params.code_label or inputs.code_label
 
-        evaluation_results = {}
-        metrics = (
-            inputs.evaluate_params.metrics
-            if isinstance(inputs.evaluate_params.metrics, list)
-            else [inputs.evaluate_params.metrics]
-        )
-        for metric in metrics:
-            for task_name in ["inpainting"] + relaxation_tasks:
-                wg.add_task(
-                    "workgraph.pythonjob",
-                    function=_evaluate_inpainting_task,
-                    inpainted_structures=wg.tasks[task_name].outputs[
-                        "structures"
-                    ],
-                    reference_structures=inputs.structures,
-                    metric=metric,
-                    max_workers=inputs.evaluate_params.max_workers,
-                    name=f"evaluate_inpainting_{metric}_{task_name}",
-                    metadata={
-                        "options": inputs.options or {},
-                    },
-                    code=orm.load_code(code_label) if code_label else None,
-                )
-                evaluation_results.setdefault(task_name, {}).update(
-                    {
-                        "metric": wg.tasks[
-                            f"evaluate_inpainting_{metric}_{task_name}"
-                        ].outputs["metric_results"],
-                    }
-                )
-        wg.outputs.evaluation_results = evaluation_results
+def _add_evaluation_tasks(
+    wg: WorkGraph,
+    inputs: InpaintingWorkGraphConfig,
+    relaxation_tasks: list[str],
+) -> WorkGraph:
+    """Add evaluation tasks to the workgraph."""
+    code_label = inputs.evaluate_params.code_label or inputs.code_label
 
-    return wg
+    evaluation_results = {}
+    metrics = (
+        inputs.evaluate_params.metrics
+        if isinstance(inputs.evaluate_params.metrics, list)
+        else [inputs.evaluate_params.metrics]
+    )
+    for metric in metrics:
+        for task_name in ["inpainting"] + relaxation_tasks:
+            wg.add_task(
+                "workgraph.pythonjob",
+                function=_evaluate_inpainting_task,
+                inpainted_structures=wg.tasks[task_name].outputs["structures"],
+                reference_structures=inputs.structures,
+                metric=metric,
+                max_workers=inputs.evaluate_params.max_workers,
+                name=f"evaluate_inpainting_{metric}_{task_name}",
+                metadata={
+                    "options": inputs.options or {},
+                },
+                code=orm.load_code(code_label) if code_label else None,
+            )
+            evaluation_results.setdefault(task_name, {}).update(
+                {
+                    "metric": wg.tasks[
+                        f"evaluate_inpainting_{metric}_{task_name}"
+                    ].outputs["metric_results"],
+                }
+            )
+    wg.outputs.evaluation_results = evaluation_results
 
 
 def _add_full_relax_task(
