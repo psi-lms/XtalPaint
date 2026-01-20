@@ -54,7 +54,7 @@ def setup_inpainting_wg(
 def _add_inpainting_candidates_generation(
     wg: WorkGraph,
     inputs: InpaintingWorkGraphConfig,
-) -> tuple[WorkGraph, any]:
+) -> None:
     """Add inpainting candidates generation task to the workgraph."""
     wg.add_task(
         "workgraph.pythonjob",
