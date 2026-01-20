@@ -4,7 +4,9 @@
 # Licensed under the MIT License.
 # Adapted from https://github.com/microsoft/mattergen/blob/main/mattergen/common/gemnet/gemnet.py#L603
 
+from typing import Optional
 
+import torch
 from mattergen.common.gemnet.gemnet import GemNetT, ModelOutput
 from mattergen.common.gemnet.utils import (
     inner_product_normalized,
@@ -13,9 +15,8 @@ from mattergen.common.utils.data_utils import (
     frac_to_cart_coords_with_lattice,
     lattice_params_to_matrix_torch,
 )
-import torch
 from torch_scatter import scatter
-from typing import Optional
+
 
 class TDGemNetT(GemNetT):
     """TD-Paint compatible version of GemNetT."""
@@ -34,41 +35,58 @@ class TDGemNetT(GemNetT):
         num_bonds: Optional[torch.Tensor] = None,
         lattice: Optional[torch.Tensor] = None,
     ) -> ModelOutput:
-        """
-        args:
+        """Forward pass of the Model.
+
+        Args:
             z: (N_cryst, num_latent)
             frac_coords: (N_atoms, 3)
             atom_types: (N_atoms, ) with D3PM need to use atomic number
             num_atoms: (N_cryst,)
-            lengths: (N_cryst, 3) (optional, either lengths and angles or lattice must be passed)
-            angles: (N_cryst, 3) (optional, either lengths and angles or lattice must be passed)
-            edge_index: (2, N_edge) (optional, only needed if self.otf_graph is False)
-            to_jimages: (N_edge, 3) (optional, only needed if self.otf_graph is False)
-            num_bonds: (N_cryst,) (optional, only needed if self.otf_graph is False)
-            lattice: (N_cryst, 3, 3) (optional, either lengths and angles or lattice must be passed)
-        returns:
-            atom_frac_coords: (N_atoms, 3)
-            atom_types: (N_atoms, MAX_ATOMIC_NUM)
-        """
+            batch: Batch indices.
+            lengths: (N_cryst, 3) (optional, either lengths and angles or
+                lattice must be passed)
+            angles: (N_cryst, 3) (optional, either lengths and angles or
+                lattice must be passed)
+            edge_index: (2, N_edge) (optional, only needed if self.otf_graph
+                is False)
+            to_jimages: (N_edge, 3) (optional, only needed if self.otf_graph
+                is False)
+            num_bonds: (N_cryst,) (optional, only needed if self.otf_graph is
+                False)
+            lattice: (N_cryst, 3, 3) (optional, either lengths and angles or
+                lattice must be passed)
 
+        Returns:
+            ModelOutput: Forces and stress that are used to calculate the score
+                in subsequent steps.
+        """
         if self.otf_graph:
             assert all(
                 [edge_index is None, to_jimages is None, num_bonds is None]
-            ), "OTF graph construction is active but received input graph information."
+            ), (
+                "OTF graph construction is active but received input "
+                "graph information."
+            )
         else:
             assert not any(
                 [edge_index is None, to_jimages is None, num_bonds is None]
-            ), "OTF graph construction is off but received no input graph information."
+            ), (
+                "OTF graph construction is off but received no input graph "
+                "information."
+            )
 
-        assert (angles is None and lengths is None) != (
-            lattice is None
-        ), "Either lattice or lengths and angles must be provided, not both or none."
+        assert (angles is None and lengths is None) != (lattice is None), (
+            "Either lattice or lengths and angles must be provided, not both "
+            "or none."
+        )
         if angles is not None and lengths is not None:
             lattice = lattice_params_to_matrix_torch(lengths, angles)
         assert lattice is not None
         distorted_lattice = lattice
 
-        pos = frac_to_cart_coords_with_lattice(frac_coords, num_atoms, lattice=distorted_lattice)
+        pos = frac_to_cart_coords_with_lattice(
+            frac_coords, num_atoms, lattice=distorted_lattice
+        )
 
         atomic_numbers = atom_types
 
@@ -83,7 +101,12 @@ class TDGemNetT(GemNetT):
             id3_ragged_idx,
             to_jimages,
         ) = self.generate_interaction_graph(
-            pos, distorted_lattice, num_atoms, edge_index, to_jimages, num_bonds
+            pos,
+            distorted_lattice,
+            num_atoms,
+            edge_index,
+            to_jimages,
+            num_bonds,
         )
         idx_s, idx_t = edge_index
 
@@ -99,11 +122,12 @@ class TDGemNetT(GemNetT):
         if z is not None:
             if z.shape[0] != h.shape[0]:
                 raise ValueError(
-                    'The TD-Paint compatible GemNetT model expects the latent '
-                    'vector z to have the same first dimension as the number '
-                    'of atoms.'
+                    "The TD-Paint compatible GemNetT model expects the latent "
+                    "vector z to have the same first dimension as the number "
+                    "of atoms."
                 )
-            # Keep this only to emphasize the difference to the original GemNetT
+            # Keep this only to emphasize the difference to the
+            # original GemNetT
             z_per_atom = z
             h = torch.cat([h, z_per_atom], dim=1)
             # Combine all embeddings
@@ -111,7 +135,9 @@ class TDGemNetT(GemNetT):
         # (nAtoms, emb_size_atom)
         m = self.edge_emb(h, rbf, idx_s, idx_t)  # (nEdges, emb_size_edge)
         batch_edge = batch[edge_index[0]]
-        cosines = torch.cosine_similarity(V_st[:, None], distorted_lattice[batch_edge], dim=-1)
+        cosines = torch.cosine_similarity(
+            V_st[:, None], distorted_lattice[batch_edge], dim=-1
+        )
         m = torch.cat([m, cosines], dim=-1)
         m = self.angle_edge_emb(m)
 
