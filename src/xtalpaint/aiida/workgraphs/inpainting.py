@@ -126,7 +126,7 @@ def _add_inpainting_pipeline(
 def _add_relaxation_tasks(
     wg: WorkGraph,
     inputs: InpaintingWorkGraphConfig,
-) -> tuple[WorkGraph, list[str]]:
+) -> None:
     """Add relaxation tasks to the workgraph."""
     code_label = inputs.relax_code_label or inputs.code_label
     relax_kwargs = deepcopy(inputs.relax_kwargs.model_dump())
