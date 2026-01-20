@@ -179,7 +179,7 @@ def _add_evaluation_tasks(
     wg: WorkGraph,
     inputs: InpaintingWorkGraphConfig,
     relaxation_tasks: list[str],
-) -> WorkGraph:
+) -> None:
     """Add evaluation tasks to the workgraph."""
     code_label = inputs.evaluate_params.code_label or inputs.code_label
 
