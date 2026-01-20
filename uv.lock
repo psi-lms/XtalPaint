@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = "==3.10.*"
 resolution-markers = [
     "sys_platform == 'linux'",
@@ -99,8 +99,8 @@ wheels = [
 
 [[package]]
 name = "aiida-workgraph"
-version = "0.5.2"
-source = { registry = "https://pypi.org/simple" }
+version = "0.5.3"
+source = { git = "https://github.com/t-reents/aiida-workgraph.git?rev=support%2Fxtalpaint-0.5.3#ae6f01639457990fb4b77d32d3373a499dd14fdf" }
 dependencies = [
     { name = "aiida-core" },
     { name = "aiida-pythonjob" },
@@ -112,10 +112,6 @@ dependencies = [
     { name = "node-graph-widget" },
     { name = "numpy" },
     { name = "scipy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/31/99/f307a44e201cfc2f48ee277e4c8b7de4ae640665cb22d5cb3d329a52154d/aiida_workgraph-0.5.2.tar.gz", hash = "sha256:c075319bbb1f0686487acd51a4f1de44c9a5b5d4ec3b68a509e3118c86cf2e64", size = 83228, upload-time = "2025-04-14T11:47:32.891Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/34/85cbe2fb9106ad6e833d1b3b8e36415f924d4cb52d946f3f0d3a01b367d3/aiida_workgraph-0.5.2-py3-none-any.whl", hash = "sha256:dbb3724481f7cdb8e56fb69135a0b9cf14fc8f687c786066545b7460e12335f7", size = 109211, upload-time = "2025-04-14T11:47:31.731Z" },
 ]
 
 [[package]]
@@ -2534,7 +2530,7 @@ wheels = [
 
 [[package]]
 name = "node-graph"
-version = "0.1.29"
+version = "0.2.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -2546,9 +2542,9 @@ dependencies = [
     { name = "scipy" },
     { name = "termcolor" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9a/ba/533acab84ccfcc09490bfd63f5ac91218c93400f17b3e815887c0d61048f/node_graph-0.1.29.tar.gz", hash = "sha256:36e2b7b0569dfb9ab70c515de8d0618c20fc2fe3794e478977cdc0caa73d1eb3", size = 36275, upload-time = "2025-03-29T19:26:12.47Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/90/ec619bbd61b68afd4d74cf9cf2489b0fe4081d1db2d79fc6c4f4af89a1d3/node_graph-0.2.6.tar.gz", hash = "sha256:e629ebd082eeadbe2550afad674ae41bf6121b422163c831ce06491b1365036a", size = 37992, upload-time = "2025-05-16T05:53:12.754Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/2b/e9a1211c3ffd615165cd6a8068eb4deb34bc0e5f500e4de08c1f06ed4e1e/node_graph-0.1.29-py3-none-any.whl", hash = "sha256:c6e07d891d23ec21050b56b4741ffb792ebde313a4c857b60715572e9ef8ebac", size = 45816, upload-time = "2025-03-29T19:26:11.069Z" },
+    { url = "https://files.pythonhosted.org/packages/13/2a/82cae9dc53cdd6437b3af5c300f44dcb4580ad14d5e4c1557aa25c42c11a/node_graph-0.2.6-py3-none-any.whl", hash = "sha256:a4afd55766a0e416f71ff3ccde76063b0aceba09b5e18216010c4b0d5d9e25de", size = 47642, upload-time = "2025-05-16T05:53:10.754Z" },
 ]
 
 [[package]]
@@ -5087,7 +5083,7 @@ requires-dist = [
     { name = "aiida-core", marker = "extra == 'aiida'", specifier = "~=2.7.0" },
     { name = "aiida-core", extras = ["tests"], marker = "extra == 'dev'", specifier = ">=2.7.0" },
     { name = "aiida-pythonjob", marker = "extra == 'aiida'", git = "https://github.com/t-reents/aiida-pythonjob.git?rev=support%2Fxtalpaint-0.2.5" },
-    { name = "aiida-workgraph", marker = "extra == 'aiida'", specifier = "==0.5.2" },
+    { name = "aiida-workgraph", marker = "extra == 'aiida'", git = "https://github.com/t-reents/aiida-workgraph.git?rev=support%2Fxtalpaint-0.5.3" },
     { name = "ase", specifier = ">=3.25.0" },
     { name = "mattergen", git = "https://github.com/microsoft/mattergen?rev=v1.0.3" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6.1" },
