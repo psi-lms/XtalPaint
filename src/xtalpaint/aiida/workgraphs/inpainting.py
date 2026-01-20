@@ -189,8 +189,14 @@ def _add_evaluation_tasks(
         if isinstance(inputs.evaluate_params.metrics, list)
         else [inputs.evaluate_params.metrics]
     )
+    tasks_to_evaluate = (
+        ["inpainting"] + relaxation_tasks
+        if inputs.run_inpinting
+        else relaxation_tasks
+    )
+
     for metric in metrics:
-        for task_name in ["inpainting"] + relaxation_tasks:
+        for task_name in tasks_to_evaluate:
             wg.add_task(
                 "workgraph.pythonjob",
                 function=_evaluate_inpainting_task,
