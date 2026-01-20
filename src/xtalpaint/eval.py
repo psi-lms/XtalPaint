@@ -10,10 +10,8 @@ from pymatgen.analysis.structure_matcher import StructureMatcher
 from pymatgen.core.structure import Structure
 from tqdm import tqdm
 
-from xtalpaint.aiida.data import (
-    BatchedStructures,
-    BatchedStructuresData,
-)
+from xtalpaint.aiida.data import BatchedStructuresData
+from xtalpaint.data import BatchedStructures
 
 
 def _check_for_nan(structure: Structure) -> bool:
