@@ -151,6 +151,9 @@ class InpaintingWorkGraphConfig(BaseModel):
     inpainting_pipeline_options: Optional[dict] = {}
     evaluate: Optional[bool] = False
     evaluate_params: Optional[EvalParameters] = None
+    refine_structures: bool = False
+    refine_structures_after_relax: bool = False
+    refinement_symprec: float = 0.01
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

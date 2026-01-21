@@ -5,6 +5,7 @@ from typing import Iterable, List, Tuple, Union
 import pandas as pd
 from aiida_workgraph import task
 from pymatgen.core.structure import Structure
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from xtalpaint.aiida.data import (
     BatchedStructures,
@@ -36,7 +37,7 @@ from xtalpaint.utils.relaxation_utils import relax_structures
         }
     ],
 )
-def _aiida_generate_inpainting_candidates(
+def _generate_inpainting_candidates_task(
     structures: Union[Structure, Iterable[Structure]] | BatchedStructures,
     n_inp: Union[int, Tuple[int, int], List[int], List[Tuple[int, int]]],
     element: Union[str, List[str]],
@@ -51,6 +52,38 @@ def _aiida_generate_inpainting_candidates(
         num_samples=num_samples,
     )
     return {"candidates": BatchedStructures(candidates)}
+
+
+@task(
+    inputs=[
+        {
+            "name": "structures",
+        }
+    ],
+    outputs=[
+        {
+            "name": "structures",
+        }
+    ],
+)
+def _refine_structures_task(
+    structures: Union[Structure, Iterable[Structure]] | BatchedStructures,
+    refinement_symprec: float,
+) -> BatchedStructures:
+    """Refine structures to standard conventional cells."""
+    if isinstance(structures, BatchedStructures):
+        structures = structures.get_structures("pymatgen")
+
+    refined_structures = {}
+    for k, s in structures.items():
+        analyzer = SpacegroupAnalyzer(s, symprec=refinement_symprec)
+        try:
+            refined_structure = analyzer.get_refined_structure()
+        except Exception:
+            refined_structure = s
+        refined_structures[k] = refined_structure
+
+    return {"structures": BatchedStructures(refined_structures)}
 
 
 @task(
