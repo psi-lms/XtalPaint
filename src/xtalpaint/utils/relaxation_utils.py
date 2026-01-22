@@ -15,7 +15,7 @@ from pymatgen.core import Structure
 from pymatgen.io.ase import AseAtomsAdaptor
 
 
-def relax_atoms_mattersim(
+def relax_atoms_mattersim_batched(
     atoms: list[Atoms],
     device: str,
     load_path: str = None,
@@ -85,7 +85,7 @@ def _load_calculator(
             from mace.calculators import mace_mp
         except ImportError as e:
             raise RuntimeError(
-                "MACE not installed. pip install mace-torch"
+                "MACE not installed. `pip install mace-torch`"
             ) from e
         return mace_mp(
             model=load_path,
@@ -98,14 +98,27 @@ def _load_calculator(
             from nequip.ase import NequIPCalculator
         except ImportError as e:
             raise RuntimeError(
-                "NequIP not installed. pip install nequip"
+                "NequIP not installed. `pip install nequip`"
             ) from e
         return NequIPCalculator.from_compiled_model(
             compile_path=load_path,
             device=device,
         )
+    if mlip == "mattersim":
+        try:
+            from mattersim.forcefield import MatterSimCalculator
+        except ImportError as e:
+            raise RuntimeError(
+                "MatterSim not installed. `pip install mattersim`"
+            ) from e
+        return MatterSimCalculator(
+            device=device,
+            load_path=load_path,
+        )
+
     raise ValueError(
-        f"Unsupported mlip: {mlip}. Use 'mattersim', 'mace', or 'nequip'."
+        f"Unsupported mlip: {mlip}. "
+        "Use 'mattersim-batched', 'mattersim', 'mace', or 'nequip'."
     )
 
 
@@ -182,7 +195,7 @@ def _relax_atoms_mlips(
     max_n_steps = kwargs.pop("max_n_steps", 500)
     fmax = kwargs.pop("fmax", 0.05)
 
-    if mlip == "mattersim":
+    if mlip == "mattersim-batched":
         if any(
             (
                 return_initial_energies,
@@ -195,7 +208,7 @@ def _relax_atoms_mlips(
                 "returning initial/final energies/forces.\n"
                 "Run them separately after relaxation if needed."
             )
-        relaxed_atoms, total_energies = relax_atoms_mattersim(
+        relaxed_atoms, total_energies = relax_atoms_mattersim_batched(
             atoms,
             device=device,
             load_path=load_path,
