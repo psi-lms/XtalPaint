@@ -12,7 +12,7 @@ from xtalpaint.utils.relaxation_utils import (
     _load_calculator,
     _relax_atoms_mlip,
     relax_structures,
-    relax_atoms_mattersim,
+    relax_atoms_mattersim_batched,
 )
 
 
@@ -34,11 +34,11 @@ def sample_atoms():
 
 
 class TestRelaxAtomsMatterSim:
-    """Tests for relax_atoms_mattersim function."""
+    """Tests for relax_atoms_mattersim_batched function."""
 
     def test_relax_single_atoms(self, sample_atoms):
         """Test relaxing a single Atoms object."""
-        relaxed_atoms, energies = relax_atoms_mattersim(
+        relaxed_atoms, energies = relax_atoms_mattersim_batched(
             atoms=[sample_atoms],
             device="cpu",
             max_n_steps=5,
@@ -54,7 +54,7 @@ class TestRelaxAtomsMatterSim:
         """Test relaxing multiple Atoms objects."""
         atoms_list = [sample_atoms, sample_atoms.copy()]
 
-        relaxed_atoms, energies = relax_atoms_mattersim(
+        relaxed_atoms, energies = relax_atoms_mattersim_batched(
             atoms=atoms_list,
             device="cpu",
             max_n_steps=5,
