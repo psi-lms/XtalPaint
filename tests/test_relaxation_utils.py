@@ -154,13 +154,13 @@ class TestRelaxStructures:
         assert len(relaxed) == 1
         assert isinstance(relaxed[0], Structure)
 
-    def test_mattersim_return_metrics_raises_error(self, sample_structure):
+    def test_mattersim_batched_return_metrics_raises_error(self, sample_structure):
         """Test that MatterSim raises error when requesting initial/final metrics."""
         with pytest.raises(ValueError, match="does not support"):
             relax_structures(
                 structures=sample_structure,
                 device="cpu",
-                mlip="mattersim",
+                mlip="mattersim-batched",
                 return_initial_energies=True,
                 max_n_steps=5,
                 fmax=0.5,
@@ -170,7 +170,7 @@ class TestRelaxStructures:
             relax_structures(
                 structures=sample_structure,
                 device="cpu",
-                mlip="mattersim",
+                mlip="mattersim-batched",
                 return_initial_forces=True,
                 max_n_steps=5,
                 fmax=0.5,
@@ -180,7 +180,7 @@ class TestRelaxStructures:
             relax_structures(
                 structures=sample_structure,
                 device="cpu",
-                mlip="mattersim",
+                mlip="mattersim-batched",
                 return_final_forces=True,
                 max_n_steps=5,
                 fmax=0.5,
