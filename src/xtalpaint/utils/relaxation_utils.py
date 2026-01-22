@@ -117,8 +117,7 @@ def _load_calculator(
         )
 
     raise ValueError(
-        f"Unsupported mlip: {mlip}. "
-        "Use 'mattersim-batched', 'mattersim', 'mace', or 'nequip'."
+        f"Unsupported mlip: {mlip}. Use 'mattersim', 'mace', or 'nequip'."
     )
 
 
