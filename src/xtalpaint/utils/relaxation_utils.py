@@ -45,7 +45,7 @@ def relax_atoms_mattersim_batched(
     potential = Potential.from_checkpoint(
         device=device, load_path=load_path, load_training_state=False
     )
-    kwargs.pop("max_n_steps", None)  # Only introduced in v1.2.0 which is
+    # kwargs.pop("max_n_steps", None)  # Only introduced in v1.2.0 which is
     # currently incompatbible with mattergen
 
     batch_relaxer = BatchRelaxer(potential=potential, **kwargs)
@@ -66,10 +66,10 @@ def _relax_atoms_mlip(
     **kwargs,
 ) -> float:
     """Relax Atoms using specified MLIP and optimizer."""
-    if filter.lower() not in SUPPORTED_FILTERS:
-        raise ValueError(f"Filter `{filter}` not implemented yet.")
-
-    filter_cls = SUPPORTED_FILTERS.get(filter.lower())
+    if filter is not None:
+        if filter.lower() not in SUPPORTED_FILTERS:
+            raise ValueError(f"Filter `{filter}` not implemented yet.")
+        filter_cls = SUPPORTED_FILTERS.get(filter.lower())
 
     opt_cls = {"bfgs": BFGS, "fire": FIRE}.get(optimizer.lower())
     if opt_cls is None:

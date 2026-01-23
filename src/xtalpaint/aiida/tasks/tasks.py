@@ -45,6 +45,7 @@ def _generate_inpainting_candidates_task(
         element=element,
         num_samples=num_samples,
     )
+    # raise ValueError(f'Generated {len(candidates)} candidates., {candidates.keys()}')
     return {"candidates": BatchedStructures(candidates)}
 
 
