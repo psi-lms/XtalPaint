@@ -1,5 +1,6 @@
 """Functions to generate inpainting candidates for crystal structures."""
 
+from copy import deepcopy
 from typing import Iterable
 
 import numpy as np
@@ -13,7 +14,6 @@ def _add_inpainting_sites(
     structure: Structure, n_sites: int, element: str
 ) -> Structure:
     """Add n_sites sites with the element to the structure."""
-    structure = structure.copy()
     for _ in range(n_sites):
         structure.append(element, np.full(3, fill_value=np.nan))
     return structure
@@ -137,7 +137,7 @@ def structure_to_inpainting_candidates(
 
     for i_sample in range(num_samples):
         for j in range(num_inpaint_sites[0], num_inpaint_sites[1] + 1):
-            s_removed = structure.copy()
+            s_removed = deepcopy(structure)
             if remove_existing_sites:
                 s_removed.remove_sites(
                     [
@@ -158,7 +158,6 @@ def structure_to_inpainting_candidates(
             s_removed.properties["material_id"] = label
 
             structures_sites_removed[label] = s_removed
-
     return structures_sites_removed
 
 
@@ -196,4 +195,5 @@ def generate_inpainting_candidates(
             )
         )
 
+    print(f"Generated {len(candidates)} candidates., {candidates.keys()}")
     return candidates

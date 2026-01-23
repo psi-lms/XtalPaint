@@ -102,8 +102,10 @@ class BatchedStructuresData(Data):
 
         self.base.attributes.set("keys", list(structures.keys()).copy())
         self.base.attributes.set("filename", "structures.extxyz")
-
+        print(f"Len of structures: {len(structures)}")
         ase_structures = self.structures_to_atoms(structures)
+        print(f"Len of ase_structures: {len(ase_structures)}")
+        print([s.info.get("key") for s in ase_structures])
 
         self._structures_to_file(ase_structures, "structures")
 
