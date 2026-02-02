@@ -76,9 +76,11 @@ def _relax_atoms_mlip(
         raise ValueError("Unsupported optimizer. Use bfgs or fire.")
 
     if filter is not None:
-        atoms = filter_cls(atoms)
+        opt_atoms = filter_cls(atoms)
+    else:
+        opt_atoms = atoms
 
-    opt = opt_cls(atoms)
+    opt = opt_cls(opt_atoms)
     opt.run(fmax=fmax, steps=steps)
 
     return atoms, float(atoms.get_potential_energy())
