@@ -8,7 +8,7 @@ from xtalpaint.aiida.data import (
     BatchedStructuresData,
 )
 from xtalpaint.aiida.tasks.tasks import _evaluate_inpainting_task
-from xtalpaint.inpainting.config_schema import InpaintingWorkGraphConfig
+from xtalpaint.inpainting.config_schema import InpaintingWorkflowConfig
 
 
 def setup_analysis_wg(
@@ -16,7 +16,7 @@ def setup_analysis_wg(
         str, BatchedStructures | BatchedStructuresData
     ],
     reference_structures: BatchedStructures,
-    inputs: InpaintingWorkGraphConfig,
+    inputs: InpaintingWorkflowConfig,
     options: dict = None,
     name: str = None,
     rmsd_normalization_element: str | None = None,

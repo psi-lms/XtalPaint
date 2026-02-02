@@ -17,11 +17,11 @@ from xtalpaint.aiida.tasks.tasks import (
     _relaxation_task,
 )
 from xtalpaint.data import BatchedStructures
-from xtalpaint.inpainting.config_schema import InpaintingWorkGraphConfig
+from xtalpaint.inpainting.config_schema import InpaintingWorkflowConfig
 
 
 def setup_inpainting_wg(
-    inputs: InpaintingWorkGraphConfig,
+    inputs: InpaintingWorkflowConfig,
 ) -> WorkGraph:
     """Create a WorkGraph for inpainting of crystal structures."""
     possible_relaxation_tasks = {
@@ -71,7 +71,7 @@ def setup_inpainting_wg(
 
 def _add_inpainting_candidates_generation(
     wg: WorkGraph,
-    inputs: InpaintingWorkGraphConfig,
+    inputs: InpaintingWorkflowConfig,
 ) -> None:
     """Add inpainting candidates generation task to the workgraph."""
     wg.add_task(
@@ -97,7 +97,7 @@ def _add_refinement_task(
     wg: WorkGraph,
     structures: BatchedStructures | BatchedStructuresData,
     refinement_symprec: float,
-    inputs: InpaintingWorkGraphConfig,
+    inputs: InpaintingWorkflowConfig,
     task_name: str = "refine_structures",
 ) -> None:
     """Add structure refinement task to the workgraph."""
@@ -114,7 +114,7 @@ def _add_refinement_task(
 
 def _add_inpainting_pipeline(
     wg: WorkGraph,
-    inputs: InpaintingWorkGraphConfig,
+    inputs: InpaintingWorkflowConfig,
 ) -> None:
     """Add inpainting pipeline task to the workgraph."""
     inpainting_candidates = (
@@ -154,7 +154,7 @@ def _add_inpainting_pipeline(
 def _add_relaxation_tasks(
     wg: WorkGraph,
     structures: BatchedStructures | BatchedStructuresData,
-    inputs: InpaintingWorkGraphConfig,
+    inputs: InpaintingWorkflowConfig,
 ) -> None:
     """Add relaxation tasks to the workgraph."""
     code_label = inputs.relax_code_label or inputs.code_label
@@ -200,7 +200,7 @@ def _add_relaxation_tasks(
 
 def _add_evaluation_tasks(
     wg: WorkGraph,
-    inputs: InpaintingWorkGraphConfig,
+    inputs: InpaintingWorkflowConfig,
     relaxation_tasks: dict[str, str],
 ) -> None:
     """Add evaluation tasks to the workgraph."""
