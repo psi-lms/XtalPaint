@@ -45,7 +45,7 @@ def relax_atoms_mattersim_batched(
     potential = Potential.from_checkpoint(
         device=device, load_path=load_path, load_training_state=False
     )
-    # kwargs.pop("max_n_steps", None)  # Only introduced in v1.2.0 which is
+    kwargs.pop("max_n_steps", None)  # Only introduced in v1.2.0 which is
     # currently incompatbible with mattergen
 
     batch_relaxer = BatchRelaxer(potential=potential, **kwargs)

@@ -14,6 +14,7 @@ def _add_inpainting_sites(
     structure: Structure, n_sites: int, element: str
 ) -> Structure:
     """Add n_sites sites with the element to the structure."""
+    structure = structure.copy()
     for _ in range(n_sites):
         structure.append(element, np.full(3, fill_value=np.nan))
     return structure
