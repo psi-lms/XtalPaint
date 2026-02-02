@@ -1,7 +1,7 @@
 """Analysis WorkGraph for Inpainting Results."""
 
 from aiida import orm
-from aiida_workgraph import WorkGraph, task
+from aiida_workgraph import WorkGraph
 
 from xtalpaint.aiida.data import (
     BatchedStructures,
@@ -11,7 +11,6 @@ from xtalpaint.aiida.tasks.tasks import _evaluate_inpainting_task
 from xtalpaint.inpainting.config_schema import InpaintingWorkGraphConfig
 
 
-@task.graph_builder
 def setup_analysis_wg(
     structures_to_compare: dict[
         str, BatchedStructures | BatchedStructuresData
@@ -54,8 +53,7 @@ def setup_analysis_wg(
                 }
             for label, structures in structures_to_compare.items():
                 wg.add_task(
-                    "workgraph.pythonjob",
-                    function=_evaluate_inpainting_task,
+                    _evaluate_inpainting_task,
                     inpainted_structures=structures,
                     reference_structures=reference_structures,
                     metric=metric,

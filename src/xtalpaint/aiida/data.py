@@ -312,7 +312,7 @@ class PandasDataFrameData(Data):
             handle.seek(0)
 
             self.base.repository.put_object_from_filelike(
-                handle, self.attributes.get("filename")
+                handle, self.base.attributes.get("filename")
             )
 
     @property
