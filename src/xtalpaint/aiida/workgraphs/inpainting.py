@@ -75,8 +75,7 @@ def _add_inpainting_candidates_generation(
 ) -> None:
     """Add inpainting candidates generation task to the workgraph."""
     wg.add_task(
-        "workgraph.pythonjob",
-        function=_generate_inpainting_candidates_task,
+        _generate_inpainting_candidates_task,
         structures=inputs.structures,
         n_inp=inputs.gen_inpainting_candidates_params.n_inp,
         element=inputs.gen_inpainting_candidates_params.element,
@@ -103,8 +102,7 @@ def _add_refinement_task(
 ) -> None:
     """Add structure refinement task to the workgraph."""
     wg.add_task(
-        "workgraph.pythonjob",
-        function=_refine_structures_task,
+        _refine_structures_task,
         structures=structures,
         refinement_symprec=refinement_symprec,
         name=task_name,
@@ -128,8 +126,7 @@ def _add_inpainting_pipeline(
     code_label = inputs.inpainting_code_label or inputs.code_label
 
     wg.add_task(
-        "workgraph.pythonjob",
-        function=_inpainting_pipeline_task,
+        _inpainting_pipeline_task,
         structures=inpainting_candidates,
         config=inputs.inpainting_pipeline_params.model_dump(exclude_none=True),
         usempi=(
@@ -140,11 +137,6 @@ def _add_inpainting_pipeline(
         name="inpainting",
         metadata={
             "options": (inputs.inpainting_pipeline_options or inputs.options),
-        },
-        serializers={
-            "pymatgen.core.trajectory.Trajectory": (
-                "xtalpaint.aiida.serializers.pymatgen_traj_to_aiida_traj"
-            ),
         },
         code=orm.load_code(code_label) if code_label else None,
     )
@@ -231,8 +223,7 @@ def _add_evaluation_tasks(
     for metric in metrics:
         for label, task_name in tasks_to_evaluate.items():
             wg.add_task(
-                "workgraph.pythonjob",
-                function=_evaluate_inpainting_task,
+                _evaluate_inpainting_task,
                 inpainted_structures=wg.tasks[task_name].outputs["structures"],
                 reference_structures=inputs.structures,
                 metric=metric,
@@ -266,19 +257,13 @@ def _add_full_relax_task(
 ):
     """Add a full relaxation task to the workgraph."""
     wg.add_task(
-        "workgraph.pythonjob",
-        function=_relaxation_task,
+        _relaxation_task,
         structures=structures,
         relax_inputs=relax_inputs,
         usempi=options.get("withmpi", False),
         name=task_name,
         metadata={
             "options": options or {},
-        },
-        serializers={
-            "pymatgen.core.structure.Structure": (
-                "xtalpaint.aiida.serializers.pymatgen_to_structure_data"
-            ),
         },
         code=code,
     )
@@ -306,19 +291,5 @@ def _add_full_relax_task(
             ]
 
         wg.outputs = outputs
-        # ToDo: Wait for aiida-workgraph release to
-        # ToDo: Update: It's released, just have to update the repo
-        # ToDo: to the new version
-        # support __setitem__ for outputs
-        # It's already released now, just have to update the general WorkGraphs
-        # then
-
-        # # wg.outputs[f"{task_name}.structures"] = (
-        # # wg.tasks[task_name].outputs[
-        # #     "structures"
-        # # ]
-        # # wg.outputs[f"{task_name}.energies"] = wg.tasks[task_name].outputs[
-        # #     "energies"
-        # # ]
 
     return wg

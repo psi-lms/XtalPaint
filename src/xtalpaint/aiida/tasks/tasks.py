@@ -1,9 +1,10 @@
 """AiiDA WorkGraph tasks for structure relaxation and inpainting."""
 
-from typing import Iterable, List, Tuple, Union
+import typing as t
 
 import pandas as pd
-from aiida_workgraph import task
+from aiida_workgraph import spec, task
+from aiida_workgraph.socket_spec import meta
 from pymatgen.core.structure import Structure
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
@@ -25,22 +26,15 @@ from xtalpaint.inpainting.inpainting_process import (
 from xtalpaint.utils.relaxation_utils import relax_structures
 
 
-@task(
-    inputs=[
-        {
-            "name": "structures",
-        }
-    ],
-    outputs=[
-        {
-            "name": "candidates",
-        }
-    ],
+@task.pythonjob(
+    outputs=spec.namespace(candidates=t.Any),
 )
 def _generate_inpainting_candidates_task(
-    structures: Union[Structure, Iterable[Structure]] | BatchedStructures,
-    n_inp: Union[int, Tuple[int, int], List[int], List[Tuple[int, int]]],
-    element: Union[str, List[str]],
+    structures: t.Union[Structure, t.Iterable[Structure]] | BatchedStructures,
+    n_inp: t.Union[
+        int, t.Tuple[int, int], t.List[int], t.List[t.Tuple[int, int]]
+    ],
+    element: t.Union[str, t.List[str]],
     num_samples: int = 1,
 ) -> BatchedStructures:
     if isinstance(structures, BatchedStructures):
@@ -54,20 +48,11 @@ def _generate_inpainting_candidates_task(
     return {"candidates": BatchedStructures(candidates)}
 
 
-@task(
-    inputs=[
-        {
-            "name": "structures",
-        }
-    ],
-    outputs=[
-        {
-            "name": "structures",
-        }
-    ],
+@task.pythonjob(
+    outputs=spec.namespace(structures=t.Any),
 )
 def _refine_structures_task(
-    structures: Union[Structure, Iterable[Structure]] | BatchedStructures,
+    structures: t.Union[Structure, t.Iterable[Structure]] | BatchedStructures,
     refinement_symprec: float,
 ) -> BatchedStructures:
     """Refine structures to standard conventional cells."""
@@ -86,33 +71,21 @@ def _refine_structures_task(
     return {"structures": BatchedStructures(refined_structures)}
 
 
-@task(
-    inputs=[
-        {
-            "name": "structures",
-        }
-    ],
-    outputs=[
-        {"name": "structures"},
-        {
-            "name": "structures_relaxed",
-            "metadata": {"required": False},
-        },
-        {
-            "name": "trajectories",
-            "identifier": "workgraph.namespace",
-            "metadata": {"dynamic": True, "required": False},
-        },
-        {
-            "name": "mean_trajectories",
-            "identifier": "workgraph.namespace",
-            "metadata": {"dynamic": True, "required": False},
-        },
-    ],
+@task.pythonjob(
+    outputs=spec.namespace(
+        structures=t.Any,
+        relaxed_structures=spec.socket(t.Any, required=False),
+        trajectories=t.Annotated[
+            dict, spec.dynamic(t.Any), meta(required=False)
+        ],
+        mean_trajectories=t.Annotated[
+            dict, spec.dynamic(t.Any), meta(required=False)
+        ],
+    )
 )
 def _inpainting_pipeline_task(
-    structures,
-    config,
+    structures: t.Union[Structure, t.Iterable[Structure]] | BatchedStructures,
+    config: dict,
     usempi: bool = False,
 ):
     if usempi:
@@ -121,41 +94,26 @@ def _inpainting_pipeline_task(
     return run_inpainting_pipeline(structures, config)
 
 
-_evaluate_inpainting_task = task(
-    inputs=[
-        {
-            "name": "inpainted_structures",
-        },
-        {
-            "name": "reference_structures",
-        },
-    ],
-    outputs=[{"name": "metric_results"}],
+_evaluate_inpainting_task = task.pythonjob(
+    outputs=spec.namespace(
+        metric_results=t.Any,
+    ),
 )(evaluate_inpainting)
 
 
-@task(
-    outputs=[
-        {"name": "structures"},
-        {"name": "final_energies"},
-        {
-            "name": "initial_energies",
-            "metadata": {"required": False},
-        },
-        {
-            "name": "initial_forces",
-            "metadata": {"required": False},
-        },
-        {
-            "name": "final_forces",
-            "metadata": {"required": False},
-        },
-    ]
+@task.pythonjob(
+    outputs=spec.namespace(
+        structures=t.Any,
+        final_energies=t.Any,
+        initial_energies=spec.socket(t.Any, required=False),
+        initial_forces=spec.socket(t.Any, required=False),
+        final_forces=spec.socket(t.Any, required=False),
+    )
 )
 def _relaxation_task(
-    structures: (
-        dict[str, Structure] | BatchedStructuresData | BatchedStructures
-    ),
+    structures: t.Union[
+        dict[str, Structure], BatchedStructuresData, BatchedStructures
+    ],
     relax_inputs: dict,
     usempi: bool = False,
 ) -> dict:

@@ -2,6 +2,7 @@
 
 import io
 import tempfile
+import typing as t
 
 import ase
 import ase.io
@@ -9,7 +10,7 @@ import numpy as np
 import pandas as pd
 from aiida.common import NotExistent
 from aiida.orm import Data, ProcessNode, QueryBuilder, StructureData
-from aiida_pythonjob import pyfunction
+from aiida_pythonjob import pyfunction, spec
 from disk_objectstore.utils import PackedObjectReader
 from pymatgen.core import Structure
 from pymatgen.io.ase import AseAtomsAdaptor
@@ -23,8 +24,7 @@ __all__ = (
 
 
 @pyfunction(
-    inputs=[{"name": "batched_structures"}, {"name": "keys"}],
-    outputs=[{"name": "structures", "identifier": "namespace"}],
+    outputs=spec.namespace(structures=t.Any),
 )
 def extract_from_batched_structures(
     batched_structures: "BatchedStructuresData", keys: list[str]
@@ -312,7 +312,7 @@ class PandasDataFrameData(Data):
             handle.seek(0)
 
             self.base.repository.put_object_from_filelike(
-                handle, self.attributes.get("filename")
+                handle, self.base.attributes.get("filename")
             )
 
     @property
