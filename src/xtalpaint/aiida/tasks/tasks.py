@@ -1,7 +1,6 @@
 """AiiDA WorkGraph tasks for structure relaxation and inpainting."""
 
 import typing as t
-from typing import Iterable, List, Tuple, Union
 
 import pandas as pd
 from aiida_workgraph import spec, task
@@ -31,9 +30,11 @@ from xtalpaint.utils.relaxation_utils import relax_structures
     outputs=spec.namespace(candidates=t.Any),
 )
 def _generate_inpainting_candidates_task(
-    structures: Union[Structure, Iterable[Structure]] | BatchedStructures,
-    n_inp: Union[int, Tuple[int, int], List[int], List[Tuple[int, int]]],
-    element: Union[str, List[str]],
+    structures: t.Union[Structure, t.Iterable[Structure]] | BatchedStructures,
+    n_inp: t.Union[
+        int, t.Tuple[int, int], t.List[int], t.List[t.Tuple[int, int]]
+    ],
+    element: t.Union[str, t.List[str]],
     num_samples: int = 1,
 ) -> BatchedStructures:
     if isinstance(structures, BatchedStructures):
@@ -51,7 +52,7 @@ def _generate_inpainting_candidates_task(
     outputs=spec.namespace(structures=t.Any),
 )
 def _refine_structures_task(
-    structures: Union[Structure, Iterable[Structure]] | BatchedStructures,
+    structures: t.Union[Structure, t.Iterable[Structure]] | BatchedStructures,
     refinement_symprec: float,
 ) -> BatchedStructures:
     """Refine structures to standard conventional cells."""
@@ -83,8 +84,8 @@ def _refine_structures_task(
     )
 )
 def _inpainting_pipeline_task(
-    structures,
-    config,
+    structures: t.Union[Structure, t.Iterable[Structure]] | BatchedStructures,
+    config: dict,
     usempi: bool = False,
 ):
     if usempi:
@@ -110,9 +111,9 @@ _evaluate_inpainting_task = task.pythonjob(
     )
 )
 def _relaxation_task(
-    structures: (
-        dict[str, Structure] | BatchedStructuresData | BatchedStructures
-    ),
+    structures: t.Union[
+        dict[str, Structure], BatchedStructuresData, BatchedStructures
+    ],
     relax_inputs: dict,
     usempi: bool = False,
 ) -> dict:
