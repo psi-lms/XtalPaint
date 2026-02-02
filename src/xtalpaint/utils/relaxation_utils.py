@@ -10,9 +10,15 @@ import tqdm
 from ase import Atoms
 from ase.calculators.calculator import Calculator
 from ase.constraints import FixAtoms
+from ase.filters import ExpCellFilter, FrechetCellFilter
 from ase.optimize import BFGS, FIRE
 from pymatgen.core import Structure
 from pymatgen.io.ase import AseAtomsAdaptor
+
+SUPPORTED_FILTERS = {
+    "expcellfilter": ExpCellFilter,
+    "frechetcellfilter": FrechetCellFilter,
+}
 
 
 def relax_atoms_mattersim_batched(
@@ -61,13 +67,20 @@ def _relax_atoms_mlip(
 ) -> float:
     """Relax Atoms using specified MLIP and optimizer."""
     if filter is not None:
-        raise NotImplementedError("Filter not implemented yet.")
+        if filter.lower() not in SUPPORTED_FILTERS:
+            raise ValueError(f"Filter `{filter}` not implemented yet.")
+        filter_cls = SUPPORTED_FILTERS.get(filter.lower())
 
     opt_cls = {"bfgs": BFGS, "fire": FIRE}.get(optimizer.lower())
     if opt_cls is None:
         raise ValueError("Unsupported optimizer. Use bfgs or fire.")
 
-    opt = opt_cls(atoms)
+    if filter is not None:
+        opt_atoms = filter_cls(atoms)
+    else:
+        opt_atoms = atoms
+
+    opt = opt_cls(opt_atoms)
     opt.run(fmax=fmax, steps=steps)
 
     return atoms, float(atoms.get_potential_energy())
@@ -297,6 +310,7 @@ def relax_structures(
                 mask=[atom.symbol not in elements_to_relax for atom in a]
             )
             a.set_constraint(c)
+        kwargs.pop("filter", None)
 
     (
         relaxed_atoms,

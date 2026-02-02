@@ -65,9 +65,10 @@ class TestAddInpaintingSites:
     def test_does_not_modify_original(self, simple_structure):
         """Test that original structure is not modified."""
         original_len = len(simple_structure)
-        _add_inpainting_sites(simple_structure, 2, "Si")
+        new_strct = _add_inpainting_sites(simple_structure, 2, "Si")
 
         assert len(simple_structure) == original_len
+        assert len(new_strct) == original_len + 2
 
     def test_add_zero_sites(self, simple_structure):
         """Test adding zero sites."""
