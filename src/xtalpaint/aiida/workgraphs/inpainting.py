@@ -138,11 +138,6 @@ def _add_inpainting_pipeline(
         metadata={
             "options": (inputs.inpainting_pipeline_options or inputs.options),
         },
-        # serializers={
-        #     "pymatgen.core.trajectory.Trajectory": (
-        #         "xtalpaint.aiida.serializers.pymatgen_traj_to_aiida_traj"
-        #     ),
-        # },
         code=orm.load_code(code_label) if code_label else None,
     )
 
@@ -270,11 +265,6 @@ def _add_full_relax_task(
         metadata={
             "options": options or {},
         },
-        # serializers={
-        #     "pymatgen.core.structure.Structure": (
-        #         "xtalpaint.aiida.serializers.pymatgen_to_structure_data"
-        #     ),
-        # },
         code=code,
     )
     if as_graph_outputs:
@@ -301,19 +291,5 @@ def _add_full_relax_task(
             ]
 
         wg.outputs = outputs
-        # ToDo: Wait for aiida-workgraph release to
-        # ToDo: Update: It's released, just have to update the repo
-        # ToDo: to the new version
-        # support __setitem__ for outputs
-        # It's already released now, just have to update the general WorkGraphs
-        # then
-
-        # # wg.outputs[f"{task_name}.structures"] = (
-        # # wg.tasks[task_name].outputs[
-        # #     "structures"
-        # # ]
-        # # wg.outputs[f"{task_name}.energies"] = wg.tasks[task_name].outputs[
-        # #     "energies"
-        # # ]
 
     return wg
