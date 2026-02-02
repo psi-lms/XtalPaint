@@ -195,5 +195,4 @@ def generate_inpainting_candidates(
             )
         )
 
-    print(f"Generated {len(candidates)} candidates., {candidates.keys()}")
     return candidates
