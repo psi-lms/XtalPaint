@@ -2,6 +2,7 @@
 
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
+from typing import TYPE_CHECKING, TypeAlias, Union
 
 import numpy as np
 import pandas as pd
@@ -10,8 +11,15 @@ from pymatgen.analysis.structure_matcher import StructureMatcher
 from pymatgen.core.structure import Structure
 from tqdm import tqdm
 
-from xtalpaint.aiida.data import BatchedStructuresData
 from xtalpaint.data import BatchedStructures
+from xtalpaint.utils import _is_batched_structure
+
+if TYPE_CHECKING:
+    from xtalpaint.aiida.data import BatchedStructuresData
+
+StructureInput: TypeAlias = Union[
+    "BatchedStructuresData", BatchedStructures, dict[str, Structure]
+]
 
 
 def _check_for_nan(structure: Structure) -> bool:
@@ -69,8 +77,8 @@ def _comparison_per_key(
 
 
 def get_structure_keys(
-    structures: dict | BatchedStructuresData | BatchedStructures,
-) -> set[str]:
+    structures: StructureInput,
+) -> tuple[list[str], list[str | None]]:
     """Get the unique keys of the structures with out sample indices.
 
     This is used to group structures that are samples of the same
@@ -155,12 +163,8 @@ def _parallel_structure_comparison(
 
 
 def evaluate_inpainting(
-    inpainted_structures: (
-        BatchedStructuresData | BatchedStructures | dict[str, Structure]
-    ),
-    reference_structures: (
-        BatchedStructuresData | BatchedStructures | dict[str, Structure]
-    ),
+    inpainted_structures: StructureInput,
+    reference_structures: StructureInput,
     *,
     metric: str = "match",
     max_workers: int = 6,
@@ -199,17 +203,11 @@ def evaluate_inpainting(
             "reference structures."
         )
 
-    if isinstance(
-        inpainted_structures,
-        (BatchedStructuresData, BatchedStructures),
-    ):
+    if _is_batched_structure(inpainted_structures):
         inpainted_structures = inpainted_structures.get_structures(
             strct_type="pymatgen"
         )
-    if isinstance(
-        reference_structures,
-        (BatchedStructuresData, BatchedStructures),
-    ):
+    if _is_batched_structure(reference_structures):
         reference_structures = reference_structures.get_structures(
             strct_type="pymatgen"
         )

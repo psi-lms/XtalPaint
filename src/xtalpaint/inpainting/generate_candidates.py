@@ -1,13 +1,35 @@
 """Functions to generate inpainting candidates for crystal structures."""
 
 from copy import deepcopy
-from typing import Iterable
+from typing import TYPE_CHECKING, Iterable, TypeAlias, Union
 
 import numpy as np
-from aiida.orm import StructureData
 from ase.atoms import Atoms
 from pymatgen.core import Structure
 from pymatgen.io.ase import AseAtomsAdaptor
+
+from xtalpaint.utils import is_aiida_installed
+
+if TYPE_CHECKING:
+    from aiida.orm import StructureData
+
+StructureType: TypeAlias = Union["StructureData", Structure, Atoms]
+
+
+def _is_aiida_structure(obj) -> bool:
+    """Check if object is an AiiDA StructureData.
+
+    Args:
+        obj: The object to check.
+
+    Returns:
+        bool: True if obj is a StructureData instance.
+    """
+    if is_aiida_installed():
+        from aiida.orm import StructureData
+
+        return isinstance(obj, StructureData)
+    return False
 
 
 def _add_inpainting_sites(
@@ -21,14 +43,13 @@ def _add_inpainting_sites(
 
 
 def _structures_to_pymatgen(
-    structures: list[Structure | StructureData]
-    | dict[str, Structure | StructureData],
+    structures: list[StructureType] | dict[str, StructureType],
 ) -> dict[str, Structure]:
     """Convert structures to list of pymatgen Structure objects.
 
     Args:
-        structures: List or dictionary of pymatgen Structure objects or
-            AiiDA StructureData objects.
+        structures: List or dictionary of pymatgen Structure objects,
+            ASE Atoms, or AiiDA StructureData objects.
 
     Returns:
         dict[str, Structure]: Dictionary of pymatgen Structure objects.
@@ -37,16 +58,17 @@ def _structures_to_pymatgen(
         structures = {f"{i}": s for i, s in enumerate(structures)}
 
     if isinstance(structures, dict):
-        if isinstance(list(structures.values())[0], Structure):
+        first_value = list(structures.values())[0]
+        if isinstance(first_value, Structure):
             return structures
-        elif isinstance(list(structures.values())[0], StructureData):
+        elif _is_aiida_structure(first_value):
             structures_pmt = {}
             for key, s in structures.items():
                 s_pmt = s.get_pymatgen_structure()
                 s_pmt.properties["uuid"] = s.uuid
                 structures_pmt[key] = s_pmt
             return structures_pmt
-        elif isinstance(list(structures.values())[0], Atoms):
+        elif isinstance(first_value, Atoms):
             return {
                 k: AseAtomsAdaptor.get_structure(a)
                 for k, a in structures.items()

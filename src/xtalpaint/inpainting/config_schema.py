@@ -1,18 +1,50 @@
 """Pydantic schemas for configuring XtalPaint inpainting workflows."""
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional, TypeAlias, Union
 
-from aiida import orm
 from ase import Atoms
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic.config import ConfigDict
 from pymatgen.core import Structure
 
-from xtalpaint.aiida.data import (
-    BatchedStructuresData,
-    InpaintingStructureData,
-)
 from xtalpaint.data import BatchedStructures
+from xtalpaint.utils import _is_batched_structure, is_aiida_installed
+
+if TYPE_CHECKING:
+    from aiida.orm import StructureData
+
+    from xtalpaint.aiida.data import (
+        BatchedStructuresData,
+        InpaintingStructureData,
+    )
+
+StructureInputType: TypeAlias = Union[
+    "BatchedStructuresData",
+    BatchedStructures,
+    dict[str, Union["StructureData", "InpaintingStructureData", Structure]],
+]
+
+
+def _is_valid_structure_type(obj) -> bool:
+    """Check if object is a valid structure type."""
+    if isinstance(obj, (Structure, Atoms)):
+        return True
+    if is_aiida_installed():
+        from aiida.orm import StructureData
+
+        from xtalpaint.aiida.data import InpaintingStructureData
+
+        return isinstance(obj, (StructureData, InpaintingStructureData))
+    return False
+
+
+def _is_inpainting_structure(obj) -> bool:
+    """Check if object is an InpaintingStructureData (requires AiiDA)."""
+    if is_aiida_installed():
+        from xtalpaint.aiida.data import InpaintingStructureData
+
+        return isinstance(obj, InpaintingStructureData)
+    return False
 
 
 class RelaxParameters(BaseModel):
@@ -125,14 +157,14 @@ class EvalParameters(BaseModel):
     code_label: Optional[str] = None
 
 
-class InpaintingWorkGraphConfig(BaseModel):
-    """Top-level configuration for a XtalPaint inpainting workflow."""
+class InpaintingWorkflowConfig(BaseModel):
+    """Top-level configuration for a XtalPaint inpainting workflow.
 
-    structures: (
-        dict[str, Structure | InpaintingStructureData]
-        | BatchedStructures
-        | BatchedStructuresData
-    )
+    This config can be used for both AiiDA-based workflows (WorkGraphs)
+    and regular Python-based workflows.
+    """
+
+    structures: StructureInputType
     run_inpainting: bool = True
     inpainting_pipeline_params: InpaintingPipelineParams
     gen_inpainting_candidates_params: Optional[
@@ -169,25 +201,18 @@ class InpaintingWorkGraphConfig(BaseModel):
             TypeError: If the structure mapping is not valid.
         """
         structures = v
-        if isinstance(v, (BatchedStructures, BatchedStructuresData)):
+        if _is_batched_structure(v):
             structures = v.get_structures(strct_type="pymatgen")
         elif not isinstance(v, dict):
             raise TypeError(
-                "Expected a dictionary of StructureData objects, "
-                f"got {type(v)}"
+                f"Expected a dictionary or BatchedStructures, got {type(v)}"
             )
         if not all(isinstance(k, str) for k in structures.keys()):
             raise TypeError("All keys in the dictionary must be strings")
-        if not all(
-            isinstance(
-                s,
-                (orm.StructureData, Structure, Atoms, InpaintingStructureData),
-            )
-            for s in structures.values()
-        ):
+        if not all(_is_valid_structure_type(s) for s in structures.values()):
             raise TypeError(
                 "All values in the dictionary must be of type StructureData, "
-                "Structure, ase.Atoms, or InpaintingStructure"
+                "Structure, ase.Atoms, or InpaintingStructureData"
             )
 
         types = {type(s) for s in structures.values()}
@@ -203,7 +228,7 @@ class InpaintingWorkGraphConfig(BaseModel):
         """Validate inputs for inpainting candidates.
 
         Ensure that 'gen_inpainting_candidates_params' is provided when
-        structures are not already InpaintingStructureData instances.
+        structures are not already inpainting structure instances.
         """
         values = (
             list(cfg.structures.values())
@@ -211,7 +236,8 @@ class InpaintingWorkGraphConfig(BaseModel):
             else cfg.structures.get_structures(strct_type="pymatgen")
         )
         if not all(
-            isinstance(s, (InpaintingStructureData, Structure)) for s in values
+            _is_inpainting_structure(s) or isinstance(s, Structure)
+            for s in values
         ):
             if cfg.gen_inpainting_candidates_params is None:
                 raise ValueError(
@@ -240,4 +266,4 @@ class InpaintingWorkGraphConfig(BaseModel):
             if isinstance(self.structures, dict)
             else self.structures.get_structures(strct_type="pymatgen")
         )
-        return all(isinstance(s, InpaintingStructureData) for s in structures)
+        return all(_is_inpainting_structure(s) for s in structures)
