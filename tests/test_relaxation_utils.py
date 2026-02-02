@@ -96,7 +96,7 @@ class TestRelaxAtomsMlip:
 
     def test_filter_not_implemented(self, sample_atoms):
         """Test that filter parameter raises NotImplementedError."""
-        with pytest.raises(ValueError, match="Filter not implemented"):
+        with pytest.raises(ValueError, match="Filter `some_filter` not implemented yet."):
             _relax_atoms_mlip(
                 atoms=sample_atoms,
                 fmax=0.1,

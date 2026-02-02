@@ -44,7 +44,7 @@ def perturbed_structure(simple_structure):
     """Create a slightly perturbed version of simple_structure."""
     structure = simple_structure.copy()
     for site in structure.sites:
-        site.frac_coords += np.random.normal(scale=0.1, size=3)
+        site.frac_coords += np.random.normal(scale=0.7, size=3)
         site.frac_coords = site.frac_coords % 1.0  # Ensure coordinates are within [0, 1)
 
     return structure
