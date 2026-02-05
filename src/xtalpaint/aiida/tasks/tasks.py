@@ -55,6 +55,7 @@ def _generate_inpainting_candidates_task(
 def _refine_structures_task(
     structures: t.Union[Structure, t.Iterable[Structure]] | BatchedStructures,
     refinement_symprec: float,
+    primitive: bool = False,
 ) -> BatchedStructures:
     """Refine structures to standard conventional cells."""
     if isinstance(structures, BatchedStructures):
@@ -67,6 +68,16 @@ def _refine_structures_task(
             refined_structure = analyzer.get_refined_structure()
         except Exception:
             refined_structure = s
+
+        if primitive:
+            analyzer = SpacegroupAnalyzer(
+                refined_structure, symprec=refinement_symprec
+            )
+            try:
+                refined_structure = analyzer.get_primitive_structure()
+            except Exception:
+                refined_structure = refined_structure
+
         refined_structures[k] = refined_structure
 
     return {"structures": BatchedStructures(refined_structures)}

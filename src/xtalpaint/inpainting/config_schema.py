@@ -172,6 +172,7 @@ class InpaintingWorkflowConfig(BaseModel):
     refine_structures: bool = False
     refine_structures_after_relax: bool = False
     refinement_symprec: float = 0.01
+    refinement_primitive: bool = False
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

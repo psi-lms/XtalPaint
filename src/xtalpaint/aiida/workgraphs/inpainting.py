@@ -48,6 +48,7 @@ def setup_inpainting_wg(
             wg,
             structures=inpainted_structures,
             refinement_symprec=inputs.refinement_symprec,
+            primitive=inputs.refinement_primitive,
             inputs=inputs,
             task_name="refine_structures",
         )
