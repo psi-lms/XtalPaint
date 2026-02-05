@@ -2,7 +2,6 @@
 
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
-from typing import TYPE_CHECKING, TypeAlias, Union
 
 import numpy as np
 import pandas as pd
@@ -13,13 +12,6 @@ from tqdm import tqdm
 
 from xtalpaint.data import BatchedStructures
 from xtalpaint.utils import _is_batched_structure
-
-if TYPE_CHECKING:
-    from xtalpaint.aiida.data import BatchedStructuresData
-
-StructureInput: TypeAlias = Union[
-    "BatchedStructuresData", BatchedStructures, dict[str, Structure]
-]
 
 
 def _check_for_nan(structure: Structure) -> bool:
@@ -77,7 +69,7 @@ def _comparison_per_key(
 
 
 def get_structure_keys(
-    structures: StructureInput,
+    structures: BatchedStructures | dict[str, Structure],
 ) -> tuple[list[str], list[str | None]]:
     """Get the unique keys of the structures with out sample indices.
 
@@ -85,7 +77,7 @@ def get_structure_keys(
     base structure.
 
     Args:
-        structures (dict | BatchedStructuresData | BatchedStructures):
+        structures (dict | BatchedStructures):
             The structures to get the keys from.
 
     Returns:
@@ -163,8 +155,8 @@ def _parallel_structure_comparison(
 
 
 def evaluate_inpainting(
-    inpainted_structures: StructureInput,
-    reference_structures: StructureInput,
+    inpainted_structures: BatchedStructures | dict[str, Structure],
+    reference_structures: BatchedStructures | dict[str, Structure],
     *,
     metric: str = "match",
     max_workers: int = 6,
