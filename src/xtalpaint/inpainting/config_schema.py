@@ -1,6 +1,6 @@
 """Pydantic schemas for configuring XtalPaint inpainting workflows."""
 
-from typing import TYPE_CHECKING, Optional, TypeAlias, Union
+from typing import Optional
 
 from ase import Atoms
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -9,20 +9,6 @@ from pymatgen.core import Structure
 
 from xtalpaint.data import BatchedStructures
 from xtalpaint.utils import _is_batched_structure, is_aiida_installed
-
-if TYPE_CHECKING:
-    from aiida.orm import StructureData
-
-    from xtalpaint.aiida.data import (
-        BatchedStructuresData,
-        InpaintingStructureData,
-    )
-
-StructureInputType: TypeAlias = Union[
-    "BatchedStructuresData",
-    BatchedStructures,
-    dict[str, Union["StructureData", "InpaintingStructureData", Structure]],
-]
 
 
 def _is_valid_structure_type(obj) -> bool:
@@ -164,7 +150,7 @@ class InpaintingWorkflowConfig(BaseModel):
     and regular Python-based workflows.
     """
 
-    structures: StructureInputType
+    structures: BatchedStructures | dict[str, Structure]
     run_inpainting: bool = True
     inpainting_pipeline_params: InpaintingPipelineParams
     gen_inpainting_candidates_params: Optional[
