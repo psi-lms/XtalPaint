@@ -6,7 +6,6 @@ import pandas as pd
 from aiida_workgraph import spec, task
 from aiida_workgraph.socket_spec import meta
 from pymatgen.core.structure import Structure
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from xtalpaint.aiida.data import (
     BatchedStructures,
@@ -15,7 +14,7 @@ from xtalpaint.aiida.data import (
 from xtalpaint.aiida.tasks.relax_parallel_utils import (
     _relax_mpi_parallel,
 )
-from xtalpaint.eval import evaluate_inpainting
+from xtalpaint.eval import evaluate_inpainting, filter_unique_structures
 from xtalpaint.inpainting.generate_candidates import (
     generate_inpainting_candidates,
 )
@@ -24,6 +23,7 @@ from xtalpaint.inpainting.inpainting_process import (
     run_mpi_parallel_inpainting_pipeline,
 )
 from xtalpaint.utils.relaxation_utils import relax_structures
+from xtalpaint.utils.structure_utils import refine_structures
 
 
 @task.pythonjob(
@@ -56,31 +56,15 @@ def _refine_structures_task(
     structures: t.Union[Structure, t.Iterable[Structure]] | BatchedStructures,
     refinement_symprec: float,
     primitive: bool = False,
-) -> BatchedStructures:
-    """Refine structures to standard conventional cells."""
-    if isinstance(structures, BatchedStructures):
-        structures = structures.get_structures("pymatgen")
-
-    refined_structures = {}
-    for k, s in structures.items():
-        analyzer = SpacegroupAnalyzer(s, symprec=refinement_symprec)
-        try:
-            refined_structure = analyzer.get_refined_structure()
-        except Exception:
-            refined_structure = s
-
-        if primitive:
-            analyzer = SpacegroupAnalyzer(
-                refined_structure, symprec=refinement_symprec
-            )
-            try:
-                refined_structure = analyzer.get_primitive_structure()
-            except Exception:
-                refined_structure = refined_structure
-
-        refined_structures[k] = refined_structure
-
-    return {"structures": BatchedStructures(refined_structures)}
+) -> dict:
+    """Thin AiiDA task wrapper around refine_structures."""
+    if isinstance(structures, BatchedStructuresData):
+        structures = structures.value
+    return {
+        "structures": refine_structures(
+            structures, symprec=refinement_symprec, primitive=primitive
+        )
+    }
 
 
 @task.pythonjob(
@@ -203,3 +187,32 @@ def _relaxation_task(
         ).set_index("keys")
 
     return outputs
+
+
+@task.pythonjob(
+    outputs=spec.namespace(unique_structures=t.Any),
+)
+def _uniqueness_filter_task(
+    structures: t.Union[
+        Structure,
+        t.Iterable[Structure],
+        BatchedStructures,
+        BatchedStructuresData,
+    ],
+    symprec: float = 0.1,
+    ltol: float = 0.2,
+    stol: float = 0.3,
+    angle_tol: float = 5.0,
+) -> dict:
+    """Thin AiiDA task wrapper around filter_unique_structures."""
+    if isinstance(structures, BatchedStructuresData):
+        structures = structures.value
+    return {
+        "unique_structures": filter_unique_structures(
+            structures,
+            symprec=symprec,
+            ltol=ltol,
+            stol=stol,
+            angle_tol=angle_tol,
+        )
+    }
