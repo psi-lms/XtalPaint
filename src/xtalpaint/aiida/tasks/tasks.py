@@ -6,7 +6,6 @@ import pandas as pd
 from aiida_workgraph import spec, task
 from aiida_workgraph.socket_spec import meta
 from pymatgen.core.structure import Structure
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 
 from xtalpaint.aiida.data import (
     BatchedStructures,
@@ -24,12 +23,32 @@ from xtalpaint.inpainting.inpainting_process import (
     run_mpi_parallel_inpainting_pipeline,
 )
 from xtalpaint.utils.relaxation_utils import relax_structures
+from xtalpaint.utils.structure_utils import (
+    filter_unique_structures,
+    refine_structures,
+)
+
+evaluate_inpainting_task = task.pythonjob(
+    outputs=spec.namespace(
+        metric_results=t.Any,
+    ),
+)(evaluate_inpainting)
+
+
+refine_structures_task = task.pythonjob(
+    outputs=spec.namespace(structures=t.Any),
+)(refine_structures)
+
+
+uniqueness_filter_task = task.pythonjob(
+    outputs=spec.namespace(unique_structures=t.Any),
+)(filter_unique_structures)
 
 
 @task.pythonjob(
     outputs=spec.namespace(candidates=t.Any),
 )
-def _generate_inpainting_candidates_task(
+def generate_inpainting_candidates_task(
     structures: t.Union[Structure, t.Iterable[Structure]] | BatchedStructures,
     n_inp: t.Union[
         int, t.Tuple[int, int], t.List[int], t.List[t.Tuple[int, int]]
@@ -37,6 +56,7 @@ def _generate_inpainting_candidates_task(
     element: t.Union[str, t.List[str]],
     num_samples: int = 1,
 ) -> BatchedStructures:
+    """Task wrapper for the inpainting candidates generation."""
     if isinstance(structures, BatchedStructures):
         structures = structures.get_structures("pymatgen")
     candidates = generate_inpainting_candidates(
@@ -47,40 +67,6 @@ def _generate_inpainting_candidates_task(
     )
 
     return {"candidates": BatchedStructures(candidates)}
-
-
-@task.pythonjob(
-    outputs=spec.namespace(structures=t.Any),
-)
-def _refine_structures_task(
-    structures: t.Union[Structure, t.Iterable[Structure]] | BatchedStructures,
-    refinement_symprec: float,
-    primitive: bool = False,
-) -> BatchedStructures:
-    """Refine structures to standard conventional cells."""
-    if isinstance(structures, BatchedStructures):
-        structures = structures.get_structures("pymatgen")
-
-    refined_structures = {}
-    for k, s in structures.items():
-        analyzer = SpacegroupAnalyzer(s, symprec=refinement_symprec)
-        try:
-            refined_structure = analyzer.get_refined_structure()
-        except Exception:
-            refined_structure = s
-
-        if primitive:
-            analyzer = SpacegroupAnalyzer(
-                refined_structure, symprec=refinement_symprec
-            )
-            try:
-                refined_structure = analyzer.get_primitive_structure()
-            except Exception:
-                refined_structure = refined_structure
-
-        refined_structures[k] = refined_structure
-
-    return {"structures": BatchedStructures(refined_structures)}
 
 
 @task.pythonjob(
@@ -95,22 +81,16 @@ def _refine_structures_task(
         ],
     )
 )
-def _inpainting_pipeline_task(
+def inpainting_pipeline_task(
     structures: t.Union[Structure, t.Iterable[Structure]] | BatchedStructures,
     config: dict,
     usempi: bool = False,
 ):
+    """Task wrapper for the inpainting pipeline."""
     if usempi:
         return run_mpi_parallel_inpainting_pipeline(structures, config)
 
     return run_inpainting_pipeline(structures, config)
-
-
-_evaluate_inpainting_task = task.pythonjob(
-    outputs=spec.namespace(
-        metric_results=t.Any,
-    ),
-)(evaluate_inpainting)
 
 
 @task.pythonjob(
@@ -122,7 +102,7 @@ _evaluate_inpainting_task = task.pythonjob(
         final_forces=spec.socket(t.Any, required=False),
     )
 )
-def _relaxation_task(
+def relaxation_task(
     structures: t.Union[
         dict[str, Structure], BatchedStructuresData, BatchedStructures
     ],
