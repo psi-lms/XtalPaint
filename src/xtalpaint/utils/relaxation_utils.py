@@ -128,6 +128,16 @@ def _load_calculator(
             device=device,
             load_path=load_path,
         )
+    if mlip == "upet":
+        try:
+            from upet.calculator import UPETCalculator
+        except ImportError as e:
+            raise RuntimeError(
+                "UPET not installed. `pip install upet`"
+            ) from e
+        return UPETCalculator(
+            model=load_path, device=device
+        )
 
     raise ValueError(
         f"Unsupported mlip: {mlip}. Use 'mattersim', 'mace', or 'nequip'."
