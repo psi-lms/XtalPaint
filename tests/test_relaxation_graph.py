@@ -12,7 +12,7 @@ from pymatgen.core.structure import Structure
 from xtalpaint.aiida.data import BatchedStructuresData
 from xtalpaint.aiida.workgraphs.relaxation import relaxation_graph
 from xtalpaint.data import BatchedStructures
-from xtalpaint.eval import filter_unique_structures
+from xtalpaint.utils.structure_utils import filter_unique_structures
 
 
 # ---------------------------------------------------------------------------
