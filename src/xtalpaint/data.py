@@ -1,5 +1,7 @@
 """Module defining custom datatypes for inpainting of structures."""
 
+from collections.abc import Mapping
+
 import ase
 from pymatgen.core import Structure
 from pymatgen.io.ase import AseAtomsAdaptor
@@ -32,7 +34,7 @@ def convert_structure(
             return AseAtomsAdaptor.get_structure(structure)
 
 
-class BatchedStructures:
+class BatchedStructures(Mapping):
     """Class to store multiple structures in a batched format."""
 
     def __init__(self, structures: dict):
@@ -43,9 +45,17 @@ class BatchedStructures:
 
         self._structures = structures
 
-    def keys(self):
-        """Return the keys of the structures."""
-        return self._keys
+    def __getitem__(self, key):
+        """Return the structure corresponding to the given key."""
+        return self._structures[key]
+
+    def __iter__(self):
+        """Return an iterator over the keys of the structures."""
+        return iter(self._keys)
+
+    def __len__(self):
+        """Return the number of structures."""
+        return len(self._keys)
 
     @property
     def structures(self):
