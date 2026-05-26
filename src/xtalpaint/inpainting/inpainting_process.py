@@ -18,7 +18,7 @@ from xtalpaint.data import BatchedStructures
 from xtalpaint.generate_inpainting import (
     generate_reconstructed_structures,
 )
-from xtalpaint.inpainting.config_schema import InpaintingPipelineParams
+from xtalpaint.inpainting.config_schema import InpaintingConfig
 from xtalpaint.utils.data_utils import create_dataloader
 
 XTALPAINT_BASE = "xtalpaint.predictor_corrector"
@@ -173,30 +173,51 @@ def _get_overrides(
 def _run_inpainting(
     predictor_corrector: str,
     structures_dl: DataLoader,
-    inpainting_model_params: dict[str, Any],
+    N_steps: int,
+    coordinates_snr: float,
+    n_corrector_steps: int,
+    batch_size: int,
     fix_cell: bool = True,
     record_trajectories: bool = False,
     pretrained_name: str | None = None,
     model_path: str | None = None,
     sampling_config_path: str | None = None,
+    n_resample_steps: int | None = None,
+    jump_length: int | None = None,
 ) -> tuple[list[Structure], list, list | None]:
     """Run the inpainting process using MatterGen.
 
     Args:
         predictor_corrector: Type of predictor-corrector to use.
         structures_dl: DataLoader containing structures to inpaint.
-        inpainting_model_params: Parameters for the inpainting model.
+        N_steps: Number of diffusion steps.
+        coordinates_snr: Signal-to-noise ratio for coordinate corrector.
+        n_corrector_steps: Number of corrector steps per diffusion step.
+        batch_size: Batch size for the DataLoader.
         fix_cell: Whether to fix the cell during sampling.
         record_trajectories: Whether to record trajectories.
         pretrained_name: Name of pretrained model, if any.
         model_path: Path to model checkpoint.
-        sampling_config_path: Path to the sampling config directory
-            for mattergen
+        sampling_config_path: Path to the sampling config directory of
+            mattergen.
+        n_resample_steps: Number of resampling steps (repaint variants only).
+        jump_length: Jump length for resampling (repaint variants only).
 
     Returns:
         Tuple of (inpainted_structures, trajectories, mean_trajectories).
         mean_trajectories is None if not recorded.
     """
+    inpainting_model_params: dict[str, Any] = {
+        "N_steps": N_steps,
+        "coordinates_snr": coordinates_snr,
+        "n_corrector_steps": n_corrector_steps,
+        "batch_size": batch_size,
+    }
+    if n_resample_steps is not None:
+        inpainting_model_params["n_resample_steps"] = n_resample_steps
+    if jump_length is not None:
+        inpainting_model_params["jump_length"] = jump_length
+
     sampling_config_overrides, config_overrides = _get_overrides(
         inpainting_model_params, predictor_corrector, fix_cell, pretrained_name
     )
@@ -305,13 +326,15 @@ def _extract_outputs(
 
 def run_inpainting_pipeline(
     structures: dict[str, Structure],
-    config: InpaintingPipelineParams | dict[str, Any],
+    config: InpaintingConfig | dict[str, Any],
 ) -> dict[str, Any]:
     """Run the inpainting experiment using MatterGen.
 
     Args:
         structures: Input structures for inpainting.
-        config: Configuration for the inpainting process.
+        config: Configuration for the inpainting process.  Pass an
+            ``InpaintingConfig`` instance or an equivalent plain dict
+            (e.g. from ``InpaintingConfig.model_dump(exclude_none=True)``).
 
     Returns:
         Dictionary containing inpainted structures, trajectories, and scores.
@@ -321,13 +344,19 @@ def run_inpainting_pipeline(
 
     labels, structures = map(list, zip(*structures.items()))
 
+    cfg = (
+        config
+        if isinstance(config, dict)
+        else config.model_dump(exclude_none=True)
+    )
+
     prepared_structures = _prepare_structures(
         structures,
-        batch_size=config["inpainting_model_params"].get("batch_size", 64),
+        batch_size=cfg["batch_size"],
     )
 
     inpainted_structures, trajectories, mean_trajectories = _run_inpainting(
-        structures_dl=prepared_structures, **config
+        structures_dl=prepared_structures, **cfg
     )
 
     return _extract_outputs(
@@ -335,13 +364,13 @@ def run_inpainting_pipeline(
         trajectories,
         mean_trajectories,
         labels,
-        config["record_trajectories"],
+        cfg["record_trajectories"],
     )
 
 
 def run_mpi_parallel_inpainting_pipeline(
     structures: dict[str, Structure],
-    config: InpaintingPipelineParams | dict[str, Any],
+    config: InpaintingConfig | dict[str, Any],
 ) -> dict[str, Any] | None:
     """Run the inpainting experiment using MatterGen with MPI parallelization.
 
@@ -359,6 +388,12 @@ def run_mpi_parallel_inpainting_pipeline(
         structures = structures.get_structures("pymatgen")
 
     labels, structures = map(list, zip(*structures.items()))
+
+    cfg = (
+        config
+        if isinstance(config, dict)
+        else config.model_dump(exclude_none=True)
+    )
 
     comm = mpi4py.MPI.COMM_WORLD
     rank = comm.rank
@@ -385,10 +420,10 @@ def run_mpi_parallel_inpainting_pipeline(
 
     prepared_structures = _prepare_structures(
         local_structures,
-        batch_size=config["inpainting_model_params"].get("batch_size", 64),
+        batch_size=cfg["batch_size"],
     )
 
-    rank_results = _run_inpainting(structures_dl=prepared_structures, **config)
+    rank_results = _run_inpainting(structures_dl=prepared_structures, **cfg)
 
     # Gather results on rank 0
     all_results = comm.gather(rank_results, root=0)
@@ -412,7 +447,7 @@ def run_mpi_parallel_inpainting_pipeline(
             all_trajectories,
             all_mean_trajectories if all_mean_trajectories else None,
             labels,
-            config["record_trajectories"],
+            cfg["record_trajectories"],
         )
 
     return None
