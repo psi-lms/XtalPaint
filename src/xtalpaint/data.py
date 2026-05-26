@@ -37,7 +37,7 @@ def convert_structure(
 class BatchedStructures(Mapping):
     """Class to store multiple structures in a batched format."""
 
-    def __init__(self, structures: dict):
+    def __init__(self, structures: Mapping[str, ase.Atoms | Structure]):
         """Initialize the BatchedStructures with structures."""
         if not all([isinstance(key, str) for key in structures.keys()]):
             raise ValueError("All keys in structures must be strings.")
@@ -57,7 +57,7 @@ class BatchedStructures(Mapping):
 
     @property
     def structures(self):
-        """Return the original structures."""
+        """Return the stored structures."""
         return self._structures
 
     def get_structure(
