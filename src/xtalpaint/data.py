@@ -41,9 +41,7 @@ class BatchedStructures(Mapping):
         """Initialize the BatchedStructures with structures."""
         if not all([isinstance(key, str) for key in structures.keys()]):
             raise ValueError("All keys in structures must be strings.")
-        self._keys = tuple(structures.keys())
-
-        self._structures = structures
+        self._structures = dict(structures)
 
     def __getitem__(self, key):
         """Return the structure corresponding to the given key."""
@@ -51,11 +49,11 @@ class BatchedStructures(Mapping):
 
     def __iter__(self):
         """Return an iterator over the keys of the structures."""
-        return iter(self._keys)
+        return iter(self._structures)
 
     def __len__(self):
         """Return the number of structures."""
-        return len(self._keys)
+        return len(self._structures)
 
     @property
     def structures(self):
@@ -66,18 +64,20 @@ class BatchedStructures(Mapping):
         self, key: str, strct_type: str = "ase"
     ) -> ase.Atoms | Structure:
         """Return a single structure by key."""
-        if key not in self.keys():
+        if key not in self:
             raise ValueError(
                 f"Key '{key}' not found in the available structures."
             )
 
-        return convert_structure(self.structures[key], strct_type=strct_type)
+        return convert_structure(self._structures[key], strct_type=strct_type)
 
     def get_structures(
         self, strct_type: str = "ase"
     ) -> dict[str, ase.Atoms | Structure]:
         """Return all structures as a dictionary."""
         return {
-            key: convert_structure(self.structures[key], strct_type=strct_type)
-            for key in self.keys()
+            key: convert_structure(
+                self._structures[key], strct_type=strct_type
+            )
+            for key in self
         }
