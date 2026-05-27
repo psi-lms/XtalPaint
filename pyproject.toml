@@ -32,8 +32,7 @@ dev = [
 ]
 aiida = [
     "aiida-core~=2.7.0",
-    "aiida-pythonjob",
-    "aiida-workgraph",
+    "aiida-workgraph~=0.8.1",
 ]
 docs = [
     "mkdocs>=1.6.1",
@@ -62,8 +61,6 @@ known-third-party = ["numpy", "torch", "pymatgen", "mattergen"]
 
 [tool.uv.sources]
 mattergen = { git = "https://github.com/microsoft/mattergen", rev = "v1.0.3" }
-aiida-pythonjob = { git = "https://github.com/t-reents/aiida-pythonjob.git", rev = "support/xtalpaint-0.2.5" }
-aiida-workgraph = { git = "https://github.com/t-reents/aiida-workgraph.git", rev = "support/xtalpaint-0.5.3" }
 
 [tool.uv.extra-build-dependencies]
 torch-cluster = ["torch"]

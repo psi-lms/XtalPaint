@@ -76,42 +76,49 @@ sdist = { url = "https://files.pythonhosted.org/packages/ea/90/1c9c13f2fdfa96602
 
 [[package]]
 name = "aiida-pythonjob"
-version = "0.2.5"
-source = { git = "https://github.com/t-reents/aiida-pythonjob.git?rev=support%2Fxtalpaint-0.2.5#a0fa4eca62f52cd336974a3af6f45293ecd887c3" }
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiida-core" },
     { name = "ase" },
-    { name = "cloudpickle" },
+    { name = "node-graph" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f7/3f/1b894e08940c70f7e7d9f122ea9b804ffde2b4071db90a53655f28d2f56f/aiida_pythonjob-0.5.1.tar.gz", hash = "sha256:ef2b5dcdf1f1ad012ff9ef3e845cd0adc025bedd0a1b36282d413059f9c2db04", size = 41641, upload-time = "2026-01-22T15:29:10.647Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/51/99/155f8f8d8b77b53d7b4bcd575f59a459e573a1db5445ddd26276dea6ecba/aiida_pythonjob-0.5.1-py3-none-any.whl", hash = "sha256:8767eff3f2703de9a8fac0fd638017bc5bbd2391aff80975a986c60136139081", size = 38285, upload-time = "2026-01-22T15:29:09.584Z" },
 ]
 
 [[package]]
 name = "aiida-shell"
-version = "0.8.1"
+version = "0.8.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiida-core" },
     { name = "dill" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/44/2e/04e96775348ba7aa0fe56121cefd71684a5a04279c1d80fc3d354a460aa6/aiida_shell-0.8.1.tar.gz", hash = "sha256:50d7cd30d266531a7787e3d35ffca0e2e0c95a51bcb3b944fb9ac3f047937422", size = 1474107, upload-time = "2025-06-03T07:02:01.176Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/23/f5/4c809364d363f90d4b726eac3df85cc60b75cba69a4837cf808aa68d9fe9/aiida_shell-0.8.2.tar.gz", hash = "sha256:7efd2e67cbabe709585fa9c9aaf455bb7da249f2ef9eed2ae0b048a66737e0fd", size = 1474349, upload-time = "2026-01-14T17:55:49.17Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/33/5e964f9bdd43fede66503801dbcd3755e333834a2b97cb3e29de03a93a1f/aiida_shell-0.8.1-py3-none-any.whl", hash = "sha256:5c4cb5ade2782104d02e71f3918d54da1e8aec88ca1e22206e490acadb363532", size = 20302, upload-time = "2025-06-03T07:01:59.725Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/9f/d61ba43b01b79881c910b93d8ac05cea741f437541fa7d43d01bd96a1bd2/aiida_shell-0.8.2-py3-none-any.whl", hash = "sha256:59feffa45c17c7de1161651601b566cf599ca0b2ec0177fff8328f28adfec85f", size = 20383, upload-time = "2026-01-14T17:55:47.636Z" },
 ]
 
 [[package]]
 name = "aiida-workgraph"
-version = "0.5.3"
-source = { git = "https://github.com/t-reents/aiida-workgraph.git?rev=support%2Fxtalpaint-0.5.3#ae6f01639457990fb4b77d32d3373a499dd14fdf" }
+version = "0.8.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiida-core" },
     { name = "aiida-pythonjob" },
     { name = "aiida-shell" },
-    { name = "ase" },
     { name = "cloudpickle" },
     { name = "jsonschema" },
     { name = "node-graph" },
     { name = "node-graph-widget" },
     { name = "numpy" },
     { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/87/0a/90eea7ffc10e748e8135efe108a435c9a7b70969b20a34fac42293f658f2/aiida_workgraph-0.8.1.tar.gz", hash = "sha256:e30a9da73ffdd6643eee6217ff3a7a0b48a88c9bde358ad2d2e06230d93ebbbf", size = 62326, upload-time = "2026-01-26T15:31:47.086Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f1/53/173691a9630b32099ef114a29c30df3285c3d0a2f2066304302ff3b428d3/aiida_workgraph-0.8.1-py3-none-any.whl", hash = "sha256:75304b462a0bd5530f13c9df30c7f680654d5ada012f204d7c7d4589c01de6b7", size = 79173, upload-time = "2026-01-26T15:31:45.928Z" },
 ]
 
 [[package]]
@@ -262,16 +269,16 @@ wheels = [
 
 [[package]]
 name = "anywidget"
-version = "0.9.18"
+version = "0.9.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ipywidgets" },
     { name = "psygnal" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ed/69/20423d6abd2a57d767d20a9dcf3f816bd4cbbe4813ac7c7158ba16e44c3f/anywidget-0.9.18.tar.gz", hash = "sha256:262cf459b517a7d044d6fbc84b953e9c83f026790b2dd3ce90f21a7f8eded00f", size = 9808509, upload-time = "2025-03-23T20:01:22.358Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/5e/cbea445bf062b81e4d366ca29dae4f0aedc7a64f384afc24670e07bec560/anywidget-0.9.21.tar.gz", hash = "sha256:b8d0172029ac426573053c416c6a587838661612208bb390fa0607862e594b27", size = 390517, upload-time = "2025-11-12T17:06:03.035Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2b/f0/09a30ca0551af20c7cefa7464b7ccb6f5407a550b83c4dcb15c410814849/anywidget-0.9.18-py3-none-any.whl", hash = "sha256:944b82ef1dd17b8ff0fb6d1f199f613caf9111338e6e2857da478f6e73770cb8", size = 220671, upload-time = "2025-03-23T20:01:21.057Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/03/c17464bbf682ea87e7e3de2ddc63395e359a78ae9c01f55fc78759ecbd79/anywidget-0.9.21-py3-none-any.whl", hash = "sha256:78c268e0fbdb1dfd15da37fb578f9cf0a0df58a430e68d9156942b7a9391a761", size = 231797, upload-time = "2025-11-12T17:06:01.564Z" },
 ]
 
 [[package]]
@@ -2530,21 +2537,24 @@ wheels = [
 
 [[package]]
 name = "node-graph"
-version = "0.2.6"
+version = "0.6.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "cloudpickle" },
-    { name = "colorama" },
+    { name = "graphviz" },
     { name = "node-graph-widget" },
     { name = "numpy" },
+    { name = "pydantic" },
     { name = "pyyaml" },
+    { name = "rdflib" },
     { name = "scipy" },
-    { name = "termcolor" },
+    { name = "typing-extensions" },
+    { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c5/90/ec619bbd61b68afd4d74cf9cf2489b0fe4081d1db2d79fc6c4f4af89a1d3/node_graph-0.2.6.tar.gz", hash = "sha256:e629ebd082eeadbe2550afad674ae41bf6121b422163c831ce06491b1365036a", size = 37992, upload-time = "2025-05-16T05:53:12.754Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/12/fa/f64cb06871fc56c43f34f799b68f84321451e0f821ccc5b9a76a8207d92a/node_graph-0.6.5.tar.gz", hash = "sha256:25114f96e3154aeccac8faf75cde16e8acaf772e0cc34857d446c1145ae30cde", size = 100369, upload-time = "2026-01-26T15:18:44.682Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/2a/82cae9dc53cdd6437b3af5c300f44dcb4580ad14d5e4c1557aa25c42c11a/node_graph-0.2.6-py3-none-any.whl", hash = "sha256:a4afd55766a0e416f71ff3ccde76063b0aceba09b5e18216010c4b0d5d9e25de", size = 47642, upload-time = "2025-05-16T05:53:10.754Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/5a/fee76af3ad82de6ce8708846bc1c6217792cde04f8acc23991c8dc496731/node_graph-0.6.5-py3-none-any.whl", hash = "sha256:4efe5acd8900f9cf872b90f3bc0afccd63651c3bf7705bd6edfbd55e1dd2c471", size = 117763, upload-time = "2026-01-26T15:18:43.618Z" },
 ]
 
 [[package]]
@@ -3186,16 +3196,16 @@ wheels = [
 
 [[package]]
 name = "psygnal"
-version = "0.15.0"
+version = "0.15.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5a/20/70430999aa609adb0601ec0f72bd23790a6e51a80ae6e7dc6621e6c5ee2a/psygnal-0.15.0.tar.gz", hash = "sha256:5534f18e2d1536675e181c6f81cf04f4177b25a9e60fdcf724a25ce5cc195765", size = 124470, upload-time = "2025-10-15T12:05:50.522Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4e/79/20c3e23e75272e9ddf018097cf872ab088bccba978888472656629efa4a3/psygnal-0.15.1.tar.gz", hash = "sha256:f64f62dee2306fc1c22050a59b6c6cdad126e04b0cf50e393ff858a1da719096", size = 123147, upload-time = "2026-01-04T16:38:41.959Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/91/a65b177c94269fb60eb913d0e8157498ee676901f054f0f04a7f0445b710/psygnal-0.15.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:3c33a022d2bdfa68c71f6fe964fb316b8cff36a936a6075bb14378823b5bd28d", size = 518166, upload-time = "2025-10-15T12:05:11.997Z" },
-    { url = "https://files.pythonhosted.org/packages/bf/b7/3ee2a09dd4cce366b6ba5870e5cd3e8563d428254e7371f45d4746bc5389/psygnal-0.15.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:27367d0b47866c6d9c47a19ae9c9570c1525f729314b1d864a7d6e052688645e", size = 576372, upload-time = "2025-10-15T12:05:13.91Z" },
-    { url = "https://files.pythonhosted.org/packages/d5/4c/42e597b47e64f4e87f5b70f03e027d0d535b1f302897d4409d774d6859fa/psygnal-0.15.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6bafa232672ae1d0f51873629c38aeed85476b6620803e8daa14edf20716054c", size = 863424, upload-time = "2025-10-15T12:05:15.099Z" },
-    { url = "https://files.pythonhosted.org/packages/90/d3/dd08bf4dad38cd418865ed9b2785f640bec68f3e91d4903ac8dda5926408/psygnal-0.15.0-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:45234b9f6f6a793c3df2867f86c5b5223731eda7734768148175268042c6b7b8", size = 872568, upload-time = "2025-10-15T12:05:16.986Z" },
-    { url = "https://files.pythonhosted.org/packages/5c/71/5daabc87e3962bfdc07e6a745aa513fe92779b18cb9c97517423d6dac241/psygnal-0.15.0-cp310-cp310-win_amd64.whl", hash = "sha256:1fcade907d3385eb3bc97617f51f275dfc5db45f601cc8ef5c2d17b2f9db1d0d", size = 409544, upload-time = "2025-10-15T12:05:18.551Z" },
-    { url = "https://files.pythonhosted.org/packages/4c/68/ad28d0c0a089bcd813fc6355a448acf18c897b4ea02d33276b5f740c2a07/psygnal-0.15.0-py3-none-any.whl", hash = "sha256:023c361c38e8ada87d0704704e1f2b7e799e9771e00b8e174fb409ff9ddeb502", size = 91027, upload-time = "2025-10-15T12:05:49.179Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/44/ab13cb6147d010258826a43e574ad94599af0de29df13795fff9efee656c/psygnal-0.15.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:8ee55e3997f796fd84d4fdbd829bb1b19d323e087c43d072744604a3016c8851", size = 587322, upload-time = "2026-01-04T16:38:04.827Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/a2/68c042a607ca613e9450dfee99cc5c2a4d10d95392fb1de2ba932dd0a605/psygnal-0.15.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:912bcf110bfe7b4aa121d24987b6a58afb967ff090a049dad136eaf3cbcc7bea", size = 576207, upload-time = "2026-01-04T16:38:06.183Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/86/123c7b169ad32994a0cd801cd1f11c1a2be84555807e9c8a8a4682c67a9f/psygnal-0.15.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b2e860c11fe075fd80c93a24081c577ef7ec5c9da41f0e75990aa4cccf3f79cf", size = 864261, upload-time = "2026-01-04T16:38:07.895Z" },
+    { url = "https://files.pythonhosted.org/packages/20/f1/886cec7bec2f27fe453cfa32bfcaac08a83aab2a04895af68f93e1c493b8/psygnal-0.15.1-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:d5b8bebcf99699ef50b6ef572868a490f6d191dc4466e5bd9818ca27e17cd581", size = 872582, upload-time = "2026-01-04T16:38:09.745Z" },
+    { url = "https://files.pythonhosted.org/packages/21/a3/da972a05568ee8a9dc6c6567bee2c0cc5af8c681baebcb9fdbbf3cceb4f7/psygnal-0.15.1-cp310-cp310-win_amd64.whl", hash = "sha256:06e0a90490e1205620d97ac52fbbe3282a22b126a26d02b3e1196bb46de16c7a", size = 411043, upload-time = "2026-01-04T16:38:11.588Z" },
+    { url = "https://files.pythonhosted.org/packages/46/49/7742544684bee728ec123515d2694cee859aa2a705951a461230b00f18cc/psygnal-0.15.1-py3-none-any.whl", hash = "sha256:4221140e633e45b076953c64bcb9b41a744833527f9a037c1ca98bc270798cbf", size = 90638, upload-time = "2026-01-04T16:38:40.841Z" },
 ]
 
 [[package]]
@@ -3786,6 +3796,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/47/42/1ff831fa87fe8f0a840ddb399054ca0009605d820e2b44ea43114f5459f4/pyzmq-27.1.0-pp310-pypy310_pp73-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:9c1790386614232e1b3a40a958454bdd42c6d1811837b15ddbb052a032a43f62", size = 567747, upload-time = "2025-09-08T23:09:43.741Z" },
     { url = "https://files.pythonhosted.org/packages/d1/db/5c4d6807434751e3f21231bee98109aa57b9b9b55e058e450d0aef59b70f/pyzmq-27.1.0-pp310-pypy310_pp73-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:448f9cb54eb0cee4732b46584f2710c8bc178b0e5371d9e4fc8125201e413a74", size = 747371, upload-time = "2025-09-08T23:09:45.575Z" },
     { url = "https://files.pythonhosted.org/packages/26/af/78ce193dbf03567eb8c0dc30e3df2b9e56f12a670bf7eb20f9fb532c7e8a/pyzmq-27.1.0-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:05b12f2d32112bf8c95ef2e74ec4f1d4beb01f8b5e703b38537f8849f92cb9ba", size = 544862, upload-time = "2025-09-08T23:09:47.448Z" },
+]
+
+[[package]]
+name = "rdflib"
+version = "7.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "isodate" },
+    { name = "pyparsing" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ec/1b/4cd9a29841951371304828d13282e27a5f25993702c7c87dcb7e0604bd25/rdflib-7.5.0.tar.gz", hash = "sha256:663083443908b1830e567350d72e74d9948b310f827966358d76eebdc92bf592", size = 4903859, upload-time = "2025-11-28T05:51:54.562Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b9/20/35d2baebacf357b562bd081936b66cd845775442973cb033a377fd639a84/rdflib-7.5.0-py3-none-any.whl", hash = "sha256:b011dfc40d0fc8a44252e906dcd8fc806a7859bc231be190c37e9568a31ac572", size = 587215, upload-time = "2025-11-28T05:51:38.178Z" },
 ]
 
 [[package]]
@@ -5062,7 +5085,6 @@ dependencies = [
 [package.optional-dependencies]
 aiida = [
     { name = "aiida-core" },
-    { name = "aiida-pythonjob" },
     { name = "aiida-workgraph" },
 ]
 dev = [
@@ -5082,8 +5104,7 @@ docs = [
 requires-dist = [
     { name = "aiida-core", marker = "extra == 'aiida'", specifier = "~=2.7.0" },
     { name = "aiida-core", extras = ["tests"], marker = "extra == 'dev'", specifier = ">=2.7.0" },
-    { name = "aiida-pythonjob", marker = "extra == 'aiida'", git = "https://github.com/t-reents/aiida-pythonjob.git?rev=support%2Fxtalpaint-0.2.5" },
-    { name = "aiida-workgraph", marker = "extra == 'aiida'", git = "https://github.com/t-reents/aiida-workgraph.git?rev=support%2Fxtalpaint-0.5.3" },
+    { name = "aiida-workgraph", marker = "extra == 'aiida'", specifier = "~=0.8.1" },
     { name = "ase", specifier = ">=3.25.0" },
     { name = "mattergen", git = "https://github.com/microsoft/mattergen?rev=v1.0.3" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6.1" },

@@ -29,11 +29,12 @@ Model checkpoints for the retrained versions of MatterGen used in our work can b
 
 ## Example
 
-The following animation shows the inpainting process of hydrogen sites in a host crystal structure.
+The following animations show the inpainting process of hydrogen sites in a host crystal structure.
 
-<p align="center">
-  <img src="./docs/assets/XtalPaint-example.gif" alt="XtalPaint example" width="300">
-</p>
+|                                                               |                                                               |
+| :-----------------------------------------------------------: | :-----------------------------------------------------------: |
+| ![XtalPaint example 1](./docs/assets/XtalPaint-example-1.gif)  | ![XtalPaint example 2](./docs/assets/XtalPaint-example-2.gif)  |
+| ![XtalPaint example 3](./docs/assets/XtalPaint-example-3.gif)  | ![XtalPaint example 4](./docs/assets/XtalPaint-example-4.gif)  |
 
 
 In the following, we show one example of how to use the inpainting models yourself.
