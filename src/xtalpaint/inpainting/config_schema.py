@@ -278,7 +278,7 @@ class AiiDAOptions(BaseModel):
 
 
 class XtalPaintConfig(BaseModel):
-    """Complete configuration for an XtalPaint inpainting workflow.
+    """Complete configuration for the XtalPaint inpainting workflow.
 
     Works for both AiiDA-based (WorkGraph) and plain-Python execution.
     AiiDA-specific settings live in the optional ``aiida`` block and are
