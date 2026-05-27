@@ -17,7 +17,7 @@ Welcome to the `XtalPaint` Documentation.
 
 Read the [Configuration Guide](configuration.md) to learn how to specify workflows and understand the AiiDA vs. plain-Python execution modes.
 
-Then check out the worked examples:
+Afterwards, check out the examples:
 
 - [With AiiDA integration](examples/running-with-AiiDA.ipynb)
 - [Without AiiDA integration](examples/running-wo-AiiDA.ipynb)
