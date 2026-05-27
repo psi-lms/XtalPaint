@@ -1,5 +1,7 @@
 """Module defining custom datatypes for inpainting of structures."""
 
+from collections.abc import Mapping
+
 import ase
 from pymatgen.core import Structure
 from pymatgen.io.ase import AseAtomsAdaptor
@@ -32,42 +34,50 @@ def convert_structure(
             return AseAtomsAdaptor.get_structure(structure)
 
 
-class BatchedStructures:
+class BatchedStructures(Mapping):
     """Class to store multiple structures in a batched format."""
 
-    def __init__(self, structures: dict):
+    def __init__(self, structures: Mapping[str, ase.Atoms | Structure]):
         """Initialize the BatchedStructures with structures."""
         if not all([isinstance(key, str) for key in structures.keys()]):
             raise ValueError("All keys in structures must be strings.")
-        self._keys = tuple(structures.keys())
+        self._structures = dict(structures)
 
-        self._structures = structures
+    def __getitem__(self, key):
+        """Return the structure corresponding to the given key."""
+        return self._structures[key]
 
-    def keys(self):
-        """Return the keys of the structures."""
-        return self._keys
+    def __iter__(self):
+        """Return an iterator over the keys of the structures."""
+        return iter(self._structures)
+
+    def __len__(self):
+        """Return the number of structures."""
+        return len(self._structures)
 
     @property
     def structures(self):
-        """Return the original structures."""
+        """Return the stored structures."""
         return self._structures
 
     def get_structure(
         self, key: str, strct_type: str = "ase"
     ) -> ase.Atoms | Structure:
         """Return a single structure by key."""
-        if key not in self.keys():
+        if key not in self:
             raise ValueError(
                 f"Key '{key}' not found in the available structures."
             )
 
-        return convert_structure(self.structures[key], strct_type=strct_type)
+        return convert_structure(self._structures[key], strct_type=strct_type)
 
     def get_structures(
         self, strct_type: str = "ase"
     ) -> dict[str, ase.Atoms | Structure]:
         """Return all structures as a dictionary."""
         return {
-            key: convert_structure(self.structures[key], strct_type=strct_type)
-            for key in self.keys()
+            key: convert_structure(
+                self._structures[key], strct_type=strct_type
+            )
+            for key in self
         }
