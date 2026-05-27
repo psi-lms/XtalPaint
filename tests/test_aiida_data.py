@@ -56,7 +56,7 @@ def test_batched_structures_basic(simple_atoms, simple_structure_pmg):
         {"atoms": simple_atoms, "pmg": simple_structure_pmg}
     )
 
-    assert batched.keys() == ("atoms", "pmg")
+    assert list(batched.keys()) == ["atoms", "pmg"]
     assert batched.structures["atoms"] is simple_atoms
 
     pmg_struct = batched.get_structure("atoms", strct_type="pymatgen")
