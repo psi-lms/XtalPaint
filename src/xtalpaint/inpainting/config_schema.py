@@ -38,12 +38,7 @@ class CandidateGenerationConfig(BaseModel):
 
 
 class InpaintingConfig(BaseModel):
-    """Configuration for the diffusion inpainting stage.
-
-    Sampling parameters are kept flat (no nested ModelParams sub-object)
-    so they can be specified in a single block and passed directly as a
-    dict to the inpainting pipeline.
-    """
+    """Configuration for the diffusion inpainting stage."""
 
     # Model — exactly one of these must be provided
     pretrained_name: Optional[str] = None
@@ -125,7 +120,8 @@ class RelaxationParams(BaseModel):
 
     These are the settings that control *how* a single relaxation is run
     (MLIP, optimiser, convergence criteria, etc.).  They are kept separate
-    from the inpainting-workflow-level controls in ``RelaxationConfig``.
+    from the inpainting-workflow-level controls in
+    ``InpaintingRelaxationConfig``.
     """
 
     mlip: str
@@ -142,6 +138,42 @@ class RelaxationParams(BaseModel):
     return_final_forces: bool = False
 
 
+# ---------------------------------------------------------------------------
+# AiiDA-specific options (ignored outside AiiDA execution)
+# ---------------------------------------------------------------------------
+
+
+class AiiDATaskOptions(BaseModel):
+    """AiiDA scheduler and resource options for a single task."""
+
+    resources: dict = Field(default_factory=dict)
+    max_wallclock_seconds: Optional[int] = None
+    queue_name: Optional[str] = None
+    withmpi: bool = False
+
+
+class RelaxationAiiDAOptions(BaseModel):
+    """AiiDA options for the three tasks inside ``relaxation_graph``.
+
+    Place this in ``RelaxationGraphConfig.aiida``; it is ignored in
+    non-AiiDA (plain Python) execution.
+
+    ``refinement_options`` and ``uniqueness_options`` fall back to
+    ``relax_options`` when not set, so you only need to override them when
+    the refinement/uniqueness tasks run on a different resource allocation.
+    Similarly, ``refinement_code_label`` and ``uniqueness_code_label`` fall
+    back to ``relax_code_label``.
+    """
+
+    relax_code_label: Optional[str] = None
+    refinement_code_label: Optional[str] = None
+    uniqueness_code_label: Optional[str] = None
+
+    relax_options: AiiDATaskOptions = Field(default_factory=AiiDATaskOptions)
+    refinement_options: Optional[AiiDATaskOptions] = None
+    uniqueness_options: Optional[AiiDATaskOptions] = None
+
+
 class RelaxationGraphConfig(BaseModel):
     """Configuration for a single ``relaxation_graph`` call.
 
@@ -150,20 +182,20 @@ class RelaxationGraphConfig(BaseModel):
     ``relaxation_graph`` can apply after each pass.
 
     This class is the direct input type for ``relaxation_graph``.
-    ``RelaxationConfig`` extends it with multi-pass orchestration flags for
-    use inside the inpainting WorkGraph.
+    ``InpaintingRelaxationConfig`` extends it with multi-pass orchestration
+    flags for use inside the inpainting WorkGraph.
     """
 
     # Core relaxation parameters (forwarded as relax_inputs
     # to relax_structures)
     params: RelaxationParams
 
-    # Post-relaxation steps
-    refine: bool = False
-    refinement_symprec: float = 0.01
-    refinement_primitive: bool = False
-    filter_unique: bool = False
-    uniqueness: UniquenessConfig = Field(default_factory=UniquenessConfig)
+    # Post-relaxation steps — presence means enabled, None means skip
+    refinement: Optional[RefinementConfig] = None
+    uniqueness: Optional[UniquenessConfig] = None
+
+    # AiiDA options (ignored in plain-Python execution)
+    aiida: Optional[RelaxationAiiDAOptions] = None
 
     def relax_inputs(self, constrained: bool = True) -> dict:
         """Build the ``relax_inputs`` kwargs dict for ``relax_structures()``.
@@ -178,7 +210,7 @@ class RelaxationGraphConfig(BaseModel):
         return self.params.model_dump(exclude={"elements_to_relax"})
 
 
-class RelaxationConfig(RelaxationGraphConfig):
+class InpaintingRelaxationConfig(RelaxationGraphConfig):
     """Configuration for the relaxation stage in the inpainting workflow.
 
     Extends ``RelaxationGraphConfig`` with multi-pass orchestration flags
@@ -228,42 +260,29 @@ class RelaxationConfig(RelaxationGraphConfig):
         return cfg
 
 
-# ---------------------------------------------------------------------------
-# AiiDA-specific options (ignored outside AiiDA execution)
-# ---------------------------------------------------------------------------
-
-
-class AiiDATaskOptions(BaseModel):
-    """AiiDA scheduler and resource options for a single task.
-
-    Replaces the raw ``Optional[dict]`` options fields.  ``withmpi``
-    controls MPI-parallel execution and is kept here (infrastructure concern)
-    rather than in the pipeline config.
-    """
-
-    resources: dict = Field(default_factory=dict)
-    max_wallclock_seconds: Optional[int] = None
-    queue_name: Optional[str] = None
-    withmpi: bool = False
-
-
 class AiiDAOptions(BaseModel):
     """AiiDA-specific settings: code labels and per-task scheduler options.
 
     Place this in ``XtalPaintConfig.aiida``; it is ignored entirely in
     non-AiiDA (plain Python) execution.
+
+    Relaxation-specific AiiDA settings live in
+    ``RelaxationGraphConfig.aiida`` (or ``InpaintingRelaxationConfig.aiida``)
+    rather than here, so they can be co-located with the relaxation config.
     """
 
     default_code_label: Optional[str] = None
     inpainting_code_label: Optional[str] = None
-    relax_code_label: Optional[str] = None
     candidate_generation_code_label: Optional[str] = None
+    pre_refinement_code_label: Optional[str] = None
 
     inpainting_options: AiiDATaskOptions = Field(
         default_factory=AiiDATaskOptions
     )
-    relax_options: AiiDATaskOptions = Field(default_factory=AiiDATaskOptions)
     candidate_generation_options: AiiDATaskOptions = Field(
+        default_factory=AiiDATaskOptions
+    )
+    pre_refinement_options: AiiDATaskOptions = Field(
         default_factory=AiiDATaskOptions
     )
 
@@ -314,7 +333,7 @@ class XtalPaintConfig(BaseModel):
             ),
             inpainting=InpaintingConfig(...),
             pre_refinement=RefinementConfig(symprec=0.01),
-            relaxation=RelaxationConfig(
+            relaxation=InpaintingRelaxationConfig(
                 params=RelaxationParams(
                     mlip="mattersim",
                     optimizer="BFGS",
@@ -322,15 +341,17 @@ class XtalPaintConfig(BaseModel):
                     fmax=0.01,
                 ),
                 full=True,
-                filter_unique=True,
+                uniqueness=UniquenessConfig(),
+                aiida=RelaxationAiiDAOptions(
+                    relax_code_label="relax@hpc",
+                    relax_options=AiiDATaskOptions(
+                        resources={"num_machines": 1},
+                        withmpi=True,
+                    ),
+                ),
             ),
             aiida=AiiDAOptions(
                 default_code_label="xtalpaint@localhost",
-                relax_code_label="relax@hpc",
-                relax_options=AiiDATaskOptions(
-                    resources={"num_machines": 1},
-                    withmpi=True,
-                ),
             ),
         )
     """
@@ -340,7 +361,7 @@ class XtalPaintConfig(BaseModel):
     candidate_generation: Optional[CandidateGenerationConfig] = None
     pre_refinement: Optional[RefinementConfig] = None
     inpainting: InpaintingConfig
-    relaxation: Optional[RelaxationConfig] = None
+    relaxation: Optional[InpaintingRelaxationConfig] = None
     aiida: Optional[AiiDAOptions] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

@@ -7,7 +7,7 @@ XtalPaint uses a single configuration object — `XtalPaintConfig` — to drive 
 ## Design principles
 
 - **Presence = enabled, `None` = skip.** Each pipeline stage is controlled by its own typed config object. If the field is `None` the stage is omitted — no boolean flags needed.
-- **AiiDA options are isolated.** Everything in the optional `aiida` block (code labels, scheduler resources) is invisible to plain-Python execution.
+- **AiiDA options are co-located with their stage.** Relaxation AiiDA settings live inside `RelaxationGraphConfig.aiida`; pipeline-level AiiDA settings (inpainting, candidate generation, pre-refinement) live in `XtalPaintConfig.aiida`.
 - **Flat, validated inputs.** Pydantic validates every field at construction time so mistakes surface immediately rather than at run time.
 
 ---
@@ -20,9 +20,10 @@ from xtalpaint.inpainting.config_schema import (
     CandidateGenerationConfig,
     InpaintingConfig,
     RefinementConfig,
-    RelaxationConfig,
+    InpaintingRelaxationConfig,
     RelaxationParams,
     UniquenessConfig,
+    RelaxationAiiDAOptions,
     AiiDAOptions,
     AiiDATaskOptions,
 )
@@ -33,19 +34,19 @@ config = XtalPaintConfig(
     candidate_generation=...,          # CandidateGenerationConfig | None
     pre_refinement=...,                # RefinementConfig | None
     inpainting=...,                    # InpaintingConfig  (always required)
-    relaxation=...,                    # RelaxationConfig | None
+    relaxation=...,                    # InpaintingRelaxationConfig | None
     aiida=...,                         # AiiDAOptions | None  (ignored outside AiiDA)
 )
 ```
 
 The pipeline runs in this order when a stage is enabled:
 
-```
+```text
 candidate_generation → inpainting → pre_refinement → relaxation
                                                         ├─ constrained pass
                                                         ├─ full pass (on constrained output)
                                                         └─ full_direct pass (on inpainted directly)
-                                                      each pass: → [refine] → [filter_unique]
+                                                      each pass: → [refinement] → [uniqueness]
 ```
 
 ---
@@ -163,7 +164,7 @@ Omit `pre_refinement` (or set it to `None`) to skip this step.
 The relaxation stage is split into two distinct layers:
 
 - **`RelaxationParams`** — the inputs forwarded directly to `relax_structures()` (MLIP, optimiser, convergence)
-- **`RelaxationConfig`** — workflow-level controls: which passes to run and post-relaxation processing
+- **`InpaintingRelaxationConfig`** — workflow-level controls: which passes to run, post-relaxation processing, and AiiDA options
 
 #### Relaxation passes
 
@@ -179,10 +180,10 @@ Three passes can be run independently or in combination:
 
 #### Post-relaxation steps
 
-`refine` and `filter_unique` run *after each active pass*, in order: relax → refine → deduplicate.
+`refinement` and `uniqueness` run *after each active pass*, in order: relax → refine → deduplicate.
 
 ```python
-relaxation=RelaxationConfig(
+relaxation=InpaintingRelaxationConfig(
     params=RelaxationParams(
         mlip="mattersim",
         optimizer="BFGS",
@@ -198,10 +199,7 @@ relaxation=RelaxationConfig(
     full_direct=False,     # skip direct full relax
 
     # Post-relaxation processing (applied to each pass):
-    refine=True,
-    refinement_symprec=0.01,
-    refinement_primitive=False,
-    filter_unique=True,
+    refinement=RefinementConfig(symprec=0.01),
     uniqueness=UniquenessConfig(
         symprec=0.01,
         ltol=0.2,
@@ -219,7 +217,7 @@ relaxation=RelaxationConfig(
 
 ## Running without AiiDA
 
-Without AiiDA, pass the `inpainting` config directly to the pipeline functions. The `aiida` block is simply not set.
+Without AiiDA, pass the `inpainting` config directly to the pipeline functions. The `aiida` block is simply not set (and `relaxation.aiida` is left as `None`).
 
 ```python
 from xtalpaint.inpainting.config_schema import XtalPaintConfig, InpaintingConfig
@@ -262,29 +260,42 @@ if config.relaxation is not None:
 
 ## Running with AiiDA
 
-Add the `aiida` block to the same `XtalPaintConfig`. Everything else stays identical — the pipeline stages, their parameters, and all validation remain unchanged.
+Add the `aiida` block to `XtalPaintConfig` for pipeline-level tasks (inpainting, candidate generation, pre-refinement). Relaxation AiiDA options live directly inside the `relaxation` config — this keeps all relaxation settings in one place.
 
 ```python
-from xtalpaint.inpainting.config_schema import AiiDAOptions, AiiDATaskOptions
-from xtalpaint.aiida.workgraphs.inpainting_graph_task import setup_inpainting_wg
+from xtalpaint.inpainting.config_schema import (
+    AiiDAOptions, AiiDATaskOptions, RelaxationAiiDAOptions,
+)
+from xtalpaint.aiida.workgraphs.inpainting import setup_inpainting_wg
 
 config = XtalPaintConfig(
     structures=...,
     candidate_generation=...,
     inpainting=...,
-    relaxation=...,
 
-    # AiiDA-specific block — ignored in plain-Python runs
+    relaxation=InpaintingRelaxationConfig(
+        params=RelaxationParams(...),
+        refinement=RefinementConfig(),
+        uniqueness=UniquenessConfig(),
+        constrained=True,
+        full=True,
+        # AiiDA options for relaxation tasks live here:
+        aiida=RelaxationAiiDAOptions(
+            relax_code_label="xtalpaint@hpc",
+            relax_options=AiiDATaskOptions(
+                resources={"num_machines": 2, "num_mpiprocs_per_machine": 8},
+                withmpi=True,
+            ),
+            # refinement and uniqueness fall back to relax_options when not set
+        ),
+    ),
+
+    # Pipeline-level AiiDA options (inpainting, candidate gen, pre-refinement):
     aiida=AiiDAOptions(
-        default_code_label="xtalpaint@localhost",   # fallback for all tasks
-        relax_code_label="xtalpaint@hpc",           # override for relaxation
+        default_code_label="xtalpaint@localhost",
         inpainting_options=AiiDATaskOptions(
             resources={"num_machines": 1, "num_mpiprocs_per_machine": 4},
             max_wallclock_seconds=3600,
-            withmpi=True,
-        ),
-        relax_options=AiiDATaskOptions(
-            resources={"num_machines": 2, "num_mpiprocs_per_machine": 8},
             withmpi=True,
         ),
     ),
@@ -297,12 +308,8 @@ wg.submit()
 
 ### Code label resolution
 
-Each task resolves its code label in order:
-
-1. Task-specific label (`inpainting_code_label`, `relax_code_label`, `candidate_generation_code_label`)
-2. Fall back to `default_code_label`
-
-This lets you run most tasks on one machine and override just the resource-heavy ones.
+- **Relaxation tasks** (`relax_structures`, post-refine, uniqueness): resolved from `relaxation.aiida` — task-specific label, then `relax_code_label` as fallback.
+- **Pipeline tasks** (inpainting, candidate generation, pre-refinement): resolved from `XtalPaintConfig.aiida` — task-specific label, then `default_code_label` as fallback.
 
 ### `AiiDATaskOptions` fields
 
@@ -312,6 +319,17 @@ This lets you run most tasks on one machine and override just the resource-heavy
 | `max_wallclock_seconds` | `int \| None` | `None` | Wall-clock limit |
 | `queue_name` | `str \| None` | `None` | Scheduler queue/partition |
 | `withmpi` | `bool` | `False` | Enable MPI-parallel execution |
+
+### `RelaxationAiiDAOptions` fields
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `relax_code_label` | `str \| None` | `None` | Code label for the relaxation task |
+| `refinement_code_label` | `str \| None` | `None` | Override code label for post-refinement (falls back to `relax_code_label`) |
+| `uniqueness_code_label` | `str \| None` | `None` | Override code label for uniqueness filter (falls back to `relax_code_label`) |
+| `relax_options` | `AiiDATaskOptions` | default | Scheduler options for the relaxation task |
+| `refinement_options` | `AiiDATaskOptions \| None` | `None` | Override scheduler options for post-refinement |
+| `uniqueness_options` | `AiiDATaskOptions \| None` | `None` | Override scheduler options for uniqueness filter |
 
 ---
 
@@ -326,8 +344,9 @@ This lets you run most tasks on one machine and override just the resource-heavy
         CandidateGenerationConfig,
         InpaintingConfig,
         RefinementConfig,
-        RelaxationConfig,
+        InpaintingRelaxationConfig,
         RelaxationParams,
+        UniquenessConfig,
     )
     from xtalpaint.inpainting.inpainting_process import run_inpainting_pipeline
 
@@ -348,7 +367,7 @@ This lets you run most tasks on one machine and override just the resource-heavy
             batch_size=1000,
         ),
         pre_refinement=RefinementConfig(symprec=0.01),
-        relaxation=RelaxationConfig(
+        relaxation=InpaintingRelaxationConfig(
             params=RelaxationParams(
                 mlip="mattersim",
                 optimizer="BFGS",
@@ -356,8 +375,8 @@ This lets you run most tasks on one machine and override just the resource-heavy
                 fmax=0.05,
             ),
             constrained=True,
-            refine=True,
-            filter_unique=True,
+            refinement=RefinementConfig(symprec=0.01),
+            uniqueness=UniquenessConfig(),
         ),
         # no aiida block → plain Python execution
     )
@@ -378,12 +397,14 @@ This lets you run most tasks on one machine and override just the resource-heavy
         CandidateGenerationConfig,
         InpaintingConfig,
         RefinementConfig,
-        RelaxationConfig,
+        InpaintingRelaxationConfig,
         RelaxationParams,
+        UniquenessConfig,
+        RelaxationAiiDAOptions,
         AiiDAOptions,
         AiiDATaskOptions,
     )
-    from xtalpaint.aiida.workgraphs.inpainting_graph_task import setup_inpainting_wg
+    from xtalpaint.aiida.workgraphs.inpainting import setup_inpainting_wg
 
     structure = Structure.from_file("host.cif")
 
@@ -402,7 +423,7 @@ This lets you run most tasks on one machine and override just the resource-heavy
             batch_size=1000,
         ),
         pre_refinement=RefinementConfig(symprec=0.01),
-        relaxation=RelaxationConfig(
+        relaxation=InpaintingRelaxationConfig(
             params=RelaxationParams(
                 mlip="mattersim",
                 optimizer="BFGS",
@@ -410,18 +431,20 @@ This lets you run most tasks on one machine and override just the resource-heavy
                 fmax=0.05,
             ),
             constrained=True,
-            refine=True,
-            filter_unique=True,
+            refinement=RefinementConfig(symprec=0.01),
+            uniqueness=UniquenessConfig(),
+            aiida=RelaxationAiiDAOptions(
+                relax_code_label="xtalpaint@hpc",
+                relax_options=AiiDATaskOptions(
+                    resources={"num_machines": 2, "num_mpiprocs_per_machine": 8},
+                    withmpi=True,
+                ),
+            ),
         ),
         aiida=AiiDAOptions(
             default_code_label="xtalpaint@localhost",
-            relax_code_label="xtalpaint@hpc",
             inpainting_options=AiiDATaskOptions(
                 resources={"num_machines": 1, "num_mpiprocs_per_machine": 4},
-                withmpi=True,
-            ),
-            relax_options=AiiDATaskOptions(
-                resources={"num_machines": 2, "num_mpiprocs_per_machine": 8},
                 withmpi=True,
             ),
         ),
@@ -431,7 +454,7 @@ This lets you run most tasks on one machine and override just the resource-heavy
     wg.submit()
     ```
 
-The two snippets are identical except for the `aiida=` block. This means you can develop and test workflows locally (without AiiDA) and then promote them to a remote HPC environment by adding the `aiida` block — no other changes needed.
+The two snippets are identical except for the `aiida=` blocks. Develop and test workflows locally (without AiiDA) and then promote them to a remote HPC environment by adding the AiiDA blocks — no other changes needed.
 
 ---
 
@@ -442,39 +465,41 @@ The two snippets are identical except for the `aiida=` block. This means you can
 | `XtalPaintConfig` | `structures`, `inpainting` | Top-level workflow config |
 | `CandidateGenerationConfig` | `n_inp`, `element` | Generate inpainting masks |
 | `InpaintingConfig` | `predictor_corrector`, `N_steps`, `coordinates_snr`, `n_corrector_steps`, `batch_size`, one of `pretrained_name`/`model_path` | Diffusion sampling |
-| `RefinementConfig` | — | Symmetry refinement before relaxation |
+| `RefinementConfig` | — | Symmetry refinement (pre-relaxation or post-relaxation) |
 | `RelaxationGraphConfig` | `params` | Single-pass input for `relaxation_graph` |
-| `RelaxationConfig` | `params` | Multi-pass relaxation stage (extends `RelaxationGraphConfig`) |
+| `InpaintingRelaxationConfig` | `params` | Multi-pass relaxation stage (extends `RelaxationGraphConfig`) |
 | `RelaxationParams` | `mlip`, `optimizer` | Inputs forwarded to `relax_structures()` |
 | `UniquenessConfig` | — | Deduplication tolerances |
-| `AiiDAOptions` | — | Code labels + per-task scheduler options |
+| `RelaxationAiiDAOptions` | — | Code labels + scheduler options for relaxation tasks |
+| `AiiDAOptions` | — | Code labels + scheduler options for pipeline tasks |
 | `AiiDATaskOptions` | — | Resources, wall-clock, MPI flag |
 
 ### Using `relaxation_graph` directly
 
-`relaxation_graph` accepts `RelaxationGraphConfig` directly, so you can call it outside the inpainting WorkGraph without needing the full `RelaxationConfig` (which carries inpainting-WG-specific pass flags):
+`relaxation_graph` accepts `RelaxationGraphConfig` directly, so you can call it outside the inpainting WorkGraph without needing the full `InpaintingRelaxationConfig`:
 
 ```python
 from xtalpaint.aiida.workgraphs.relaxation import relaxation_graph
 from xtalpaint.inpainting.config_schema import (
-    RelaxationGraphConfig, RelaxationParams, UniquenessConfig,
-    AiiDATaskOptions,
+    RelaxationGraphConfig, RelaxationParams, RefinementConfig,
+    UniquenessConfig, RelaxationAiiDAOptions, AiiDATaskOptions,
 )
 
 relax_cfg = RelaxationGraphConfig(
     params=RelaxationParams(mlip="mattersim", optimizer="BFGS", elements_to_relax=["H"]),
-    refine=True,
-    filter_unique=True,
-    uniqueness=UniquenessConfig(symprec=0.01),
+    refinement=RefinementConfig(symprec=0.01),
+    uniqueness=UniquenessConfig(),
+    aiida=RelaxationAiiDAOptions(
+        relax_code_label="xtalpaint@hpc",
+        relax_options=AiiDATaskOptions(withmpi=True, resources={"num_machines": 1}),
+    ),
 )
 
 out = relaxation_graph(
     structures=my_structures,
     relax_config=relax_cfg,
-    aiida_options=AiiDATaskOptions(withmpi=True, resources={"num_machines": 1}),
-    code_label="xtalpaint@hpc",
     constrained=True,          # True → include elements_to_relax; False → full relax
 )
 ```
 
-Since `RelaxationConfig` inherits from `RelaxationGraphConfig`, you can also pass a `RelaxationConfig` directly wherever `RelaxationGraphConfig` is expected.
+Since `InpaintingRelaxationConfig` inherits from `RelaxationGraphConfig`, you can also pass an `InpaintingRelaxationConfig` directly wherever `RelaxationGraphConfig` is expected.
