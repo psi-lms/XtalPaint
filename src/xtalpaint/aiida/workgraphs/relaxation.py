@@ -24,7 +24,7 @@ from xtalpaint.inpainting.config_schema import (
 )
 def relaxation_graph(
     structures: t.Any,
-    relax_config: RelaxationGraphConfig,
+    relax_config: spec.Leaf[RelaxationGraphConfig],
     command_info: dict = None,
     constrained: bool = True,
 ):
@@ -106,9 +106,8 @@ def relaxation_graph(
         )
         refined = tasks.refine_structures_task(
             structures=current_structures,
-            refinement_symprec=relax_config.refinement.symprec,
+            symprec=relax_config.refinement.symprec,
             primitive=relax_config.refinement.primitive,
-            usempi=_usempi,
             metadata=_metadata,
             code=_code,
             command_info=_command_info,
@@ -125,7 +124,6 @@ def relaxation_graph(
             ltol=relax_config.uniqueness.ltol,
             stol=relax_config.uniqueness.stol,
             angle_tol=relax_config.uniqueness.angle_tol,
-            usempi=_usempi,
             metadata=_metadata,
             code=_code,
             command_info=_command_info,

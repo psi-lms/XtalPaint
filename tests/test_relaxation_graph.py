@@ -2,7 +2,6 @@
 
 import sys
 
-from aiida import orm
 import numpy as np
 import pandas as pd
 import pytest
@@ -12,6 +11,12 @@ from pymatgen.core.structure import Structure
 from xtalpaint.aiida.data import BatchedStructuresData
 from xtalpaint.aiida.workgraphs.relaxation import relaxation_graph
 from xtalpaint.data import BatchedStructures
+from xtalpaint.inpainting.config_schema import (
+    RefinementConfig,
+    RelaxationGraphConfig,
+    RelaxationParams,
+    UniquenessConfig,
+)
 from xtalpaint.utils.structure_utils import filter_unique_structures
 
 
@@ -77,10 +82,15 @@ class TestRelaxationGraphStructure:
     the last active task in the chain.
     """
 
-    def _build(self, structures, **kwargs):
+    def _build(self, structures, refine=False, filter_unique=False, **kwargs):
+        relax_config = RelaxationGraphConfig(
+            params=RelaxationParams(mlip="mattersim", optimizer="BFGS"),
+            refinement=RefinementConfig() if refine else None,
+            uniqueness=UniquenessConfig() if filter_unique else None,
+        )
         return relaxation_graph.build(
             structures=structures,
-            relax_inputs={},
+            relax_config=relax_config,
             **kwargs,
         )
 
@@ -90,11 +100,14 @@ class TestRelaxationGraphStructure:
 
     def test_refine_flag_adds_refinement_task(self, bcc_si):
         wg = self._build(BatchedStructures({"s": bcc_si}), refine=True)
-        assert _user_tasks(wg) == {"relaxation_task", "refine_structures_task"}
+        assert _user_tasks(wg) == {"relaxation_task", "refine_structures"}
 
     def test_filter_unique_flag_adds_uniqueness_task(self, bcc_si):
         wg = self._build(BatchedStructures({"s": bcc_si}), filter_unique=True)
-        assert _user_tasks(wg) == {"relaxation_task", "uniqueness_filter_task"}
+        assert _user_tasks(wg) == {
+            "relaxation_task",
+            "filter_unique_structures",
+        }
 
     def test_both_flags_produce_full_chain(self, bcc_si):
         wg = self._build(
@@ -102,8 +115,8 @@ class TestRelaxationGraphStructure:
         )
         assert _user_tasks(wg) == {
             "relaxation_task",
-            "refine_structures_task",
-            "uniqueness_filter_task",
+            "refine_structures",
+            "filter_unique_structures",
         }
 
     @pytest.mark.parametrize(
@@ -133,9 +146,9 @@ class TestRelaxationGraphStructure:
         "refine,filter_unique,expected_src",
         [
             (False, False, "relaxation_task"),
-            (True, False, "refine_structures_task"),
-            (False, True, "uniqueness_filter_task"),
-            (True, True, "uniqueness_filter_task"),
+            (True, False, "refine_structures"),
+            (False, True, "filter_unique_structures"),
+            (True, True, "filter_unique_structures"),
         ],
     )
     def test_structures_output_linked_to_last_active_task(
@@ -283,12 +296,13 @@ def fcc_al_conventional():
 
 
 # MatterSim relax settings kept minimal so the tests run quickly on CPU.
-_MATTERSIM_RELAX_INPUTS = {
-    "device": "cpu",
-    "mlip": "mattersim",
-    "fmax": 0.1,
-    "max_n_steps": 100,
-}
+_MATTERSIM_PARAMS = RelaxationParams(
+    mlip="mattersim",
+    optimizer="BFGS",
+    device="cpu",
+    fmax=0.1,
+    max_n_steps=100,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -310,12 +324,15 @@ class TestRelaxationGraphExecution:
     before the WorkGraph is submitted.
     """
 
-    def _build_and_run(self, structures: dict, **graph_kwargs):
+    def _build_and_run(self, structures: dict, filter_unique=False):
+        relax_config = RelaxationGraphConfig(
+            params=_MATTERSIM_PARAMS,
+            uniqueness=UniquenessConfig() if filter_unique else None,
+        )
         wg = relaxation_graph.build(
             structures=BatchedStructures(structures),
-            relax_inputs=_MATTERSIM_RELAX_INPUTS,
+            relax_config=relax_config,
             command_info={"filepath_executable": sys.executable},
-            **graph_kwargs,
         )
         wg.run()
 
@@ -379,7 +396,7 @@ class TestRelaxationGraphExecution:
         assert wg.state == "FINISHED"
 
         unique_node = (
-            wg.tasks.uniqueness_filter_task.outputs.unique_structures.value
+            wg.tasks.filter_unique_structures.outputs.unique_structures.value
         )
         assert isinstance(unique_node, BatchedStructuresData)
         unique_keys = list(unique_node.value.keys())
