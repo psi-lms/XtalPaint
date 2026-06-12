@@ -1,6 +1,7 @@
 """Tests for the InpaintingWorkGraph: build-only wiring and execution."""
 
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -27,6 +28,13 @@ _RELAX_PASSES = {
     "unrelaxed_inpainted_full_relaxation",
 }
 
+# Use the sampling config bundled with XtalPaint: mattergen's built-in default
+# resolves relative to its install location and does not exist for wheel
+# installs (e.g. in CI).
+_SAMPLING_CONF = str(
+    (Path(__file__).parent.parent / "mattergen-configs" / "sampling_conf").resolve()
+)
+
 _INPAINTING = dict(
     pretrained_name="mattergen_base",
     predictor_corrector="baseline",
@@ -34,6 +42,7 @@ _INPAINTING = dict(
     coordinates_snr=0.2,
     n_corrector_steps=1,
     batch_size=16,
+    sampling_config_path=_SAMPLING_CONF,
 )
 
 

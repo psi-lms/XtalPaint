@@ -48,6 +48,14 @@ jobs:
     - name: Install the project
       run: uv sync --locked --all-extras --dev
 
+    - name: Cache model checkpoints (MatterGen, MatterSim)
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/huggingface
+          ~/.local/mattersim
+        key: model-checkpoints-v1
+
     - name: Run tests with pytest
       run: |
         uv run verdi status
