@@ -88,30 +88,29 @@ inpainted_structures = run_inpainting_pipeline(
 
 If you find this project useful in your research, please consider citing:
 
+
+> Reents, T., Cantarella, A., Bercx, M., Bonfà, and Pizzi, G. Score-based diffusion models for accurate crystal-structure inpainting and reconstruction of hydrogen positions. *npj Comput. Mater.* **12**, 203 (2026). https://doi.org/10.1038/s41524-026-02090-1
+
+
 ```bibtex
-@misc{reents_2026_inpainting,
-      title={Score-based diffusion models for accurate crystal-structure inpainting and reconstruction of hydrogen positions},
-      author={Timo Reents and Arianna Cantarella and Marnik Bercx and Pietro Bonfà and Giovanni Pizzi},
-      year={2026},
-      eprint={2601.01959},
-      archivePrefix={arXiv},
-      primaryClass={cond-mat.mtrl-sci},
-      url={https://arxiv.org/abs/2601.01959},
+@article{Reents2026,
+  title = {Score-based diffusion models for accurate crystal-structure inpainting and reconstruction of hydrogen positions},
+  volume = {12},
+  ISSN = {2057-3960},
+  url = {http://dx.doi.org/10.1038/s41524-026-02090-1},
+  DOI = {10.1038/s41524-026-02090-1},
+  number = {1},
+  journal = {npj Computational Materials},
+  publisher = {Springer Science and Business Media LLC},
+  author = {Reents,  Timo and Cantarella,  Arianna and Bercx,  Marnik and Bonfà,  Pietro and Pizzi,  Giovanni},
+  year = {2026},
+  month = June
 }
 ```
 
 ## Acknowledgements
 
-The initial version of this project relies on and implements extensions to [`MatterGen`](https://github.com/microsoft/mattergen). Please also consider citing the corresponding publication:
+The initial version of this project relies on and implements extensions to [`MatterGen`](https://github.com/microsoft/mattergen). Please also consider citing the corresponding publication by [Zeni _et al._](https://doi.org/10.1038/s41586-025-08628-5).
 
-```bibtex
-@article{MatterGen2025,
-  author  = {Zeni, Claudio and Pinsler, Robert and Z{\"u}gner, Daniel and Fowler, Andrew and Horton, Matthew and Fu, Xiang and Wang, Zilong and Shysheya, Aliaksandra and Crabb{\'e}, Jonathan and Ueda, Shoko and Sordillo, Roberto and Sun, Lixin and Smith, Jake and Nguyen, Bichlien and Schulz, Hannes and Lewis, Sarah and Huang, Chin-Wei and Lu, Ziheng and Zhou, Yichi and Yang, Han and Hao, Hongxia and Li, Jielan and Yang, Chunlei and Li, Wenjie and Tomioka, Ryota and Xie, Tian},
-  journal = {Nature},
-  title   = {A generative model for inorganic materials design},
-  year    = {2025},
-  doi     = {10.1038/s41586-025-08628-5},
-}
-```
 
 All modules that are reused or adapted from [`MatterGen`](https://github.com/microsoft/mattergen) are clearly marked in the codebase.
