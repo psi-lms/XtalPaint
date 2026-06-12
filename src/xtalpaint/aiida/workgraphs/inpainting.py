@@ -65,7 +65,6 @@ def InpaintingWorkGraph(
 
     _aiida: AiiDAOptions = inputs.aiida or AiiDAOptions()
 
-    # --- Generate inpainting candidates ---
     if inputs.run_inpainting:
         cand_opts = _aiida.candidate_generation_options
         cand_code_label = _aiida.get_code_label(
@@ -85,7 +84,6 @@ def InpaintingWorkGraph(
     else:
         inpainting_candidates = structures
 
-    # --- Inpainting pipeline ---
     if inputs.run_inpainting:
         inp_opts = _aiida.inpainting_options
         inp_code_label = _aiida.get_code_label(_aiida.inpainting_code_label)
@@ -106,7 +104,6 @@ def InpaintingWorkGraph(
     else:
         inpainted_structures = structures
 
-    # --- Pre-refinement (before relaxation) ---
     if inputs.pre_refinement is not None:
         pre_ref_opts = _aiida.pre_refinement_options
         pre_ref_code_label = _aiida.get_code_label(
@@ -128,8 +125,6 @@ def InpaintingWorkGraph(
 
     graph_outputs["inpainted_structures"] = inpainted_structures
 
-    # --- Relaxation ---
-    # AiiDA options for relaxation are embedded in inputs.relaxation.aiida
     if inputs.relaxation is not None:
         relax = inputs.relaxation
 

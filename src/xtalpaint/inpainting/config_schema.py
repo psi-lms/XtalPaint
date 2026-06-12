@@ -24,11 +24,6 @@ def _is_valid_structure_type(obj) -> bool:
     return False
 
 
-# ---------------------------------------------------------------------------
-# Stage configs
-# ---------------------------------------------------------------------------
-
-
 class CandidateGenerationConfig(BaseModel):
     """Configuration for generating inpainting candidates."""
 
@@ -44,11 +39,9 @@ class InpaintingConfig(BaseModel):
 
     model_config = {"leaf": True}
 
-    # Model — exactly one of these must be provided
     pretrained_name: Optional[str] = None
     model_path: Optional[str] = None
 
-    # Diffusion sampling
     predictor_corrector: str
     N_steps: int
     coordinates_snr: float
@@ -58,7 +51,6 @@ class InpaintingConfig(BaseModel):
     record_trajectories: bool = False
     sampling_config_path: Optional[str] = None
 
-    # Repaint-specific (required when predictor_corrector contains 'repaint')
     n_resample_steps: Optional[int] = None
     jump_length: Optional[int] = None
 
@@ -150,11 +142,6 @@ class RelaxationParams(BaseModel):
     return_final_forces: bool = False
 
 
-# ---------------------------------------------------------------------------
-# AiiDA-specific options (ignored outside AiiDA execution)
-# ---------------------------------------------------------------------------
-
-
 class AiiDATaskOptions(TypedDict):
     """AiiDA scheduler and resource options for a single task."""
 
@@ -196,12 +183,8 @@ class RelaxationGraphConfig(BaseModel):
     """
 
     params: RelaxationParams
-
-    # refinement: Optional[RefinementConfig] | None = None# | bool = False
     refinement: RefinementConfig = Field(default_factory=RefinementConfig)
-    # uniqueness: Optional[UniquenessConfig] | None = None# | bool = False
     uniqueness: UniquenessConfig = Field(default_factory=UniquenessConfig)
-
     aiida: Optional[RelaxationAiiDAOptions]  # = None
 
 
@@ -228,7 +211,6 @@ class InpaintingRelaxationConfig(BaseModel):
         ``unrelaxed_inpainted_full_relaxation``.
     """
 
-    # Which relaxation passes to run (inpainting-WG-specific)
     constrained: bool = True
     full: bool = False
     full_direct: bool = False
