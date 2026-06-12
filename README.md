@@ -60,28 +60,28 @@ inpainting_candidates = generate_inpainting_candidates(
     num_samples=1, # Number of samples per structure
 )
 
+from xtalpaint.inpainting.config_schema import InpaintingConfig
 from xtalpaint.inpainting.inpainting_process import (
     run_inpainting_pipeline,
 )
 
 # Parameters for the inpainting, please adjust to reasonable values
-param_grid = {
-    "N_steps": 50,
-    "coordinates_snr": 0.2,
-    "n_corrector_steps": 1,
-    "batch_size": 100,
-}
-
-inpainted_structures = run_inpainting_pipeline(
-    structures=inpainting_candidates,
-    config={
-        "record_trajectories": False,
-        "predictor_corrector": "baseline",
-        "inpainting_model_params": param_grid,
-        "pretrained_name": "mattergen_base",
-        "sampling_config_path": None, # Potentially change it to point to the mattergen sampling config directory
-    }
+config = InpaintingConfig(
+    pretrained_name="mattergen_base",
+    predictor_corrector="baseline",
+    N_steps=50,
+    coordinates_snr=0.2,
+    n_corrector_steps=1,
+    batch_size=100,
+    record_trajectories=False,
+    sampling_config_path=None, # Potentially change it to point to the mattergen sampling config directory
 )
+
+results = run_inpainting_pipeline(
+    structures=inpainting_candidates,
+    config=config,
+)
+inpainted_structures = results["structures"]
 ```
 
 ## Citation

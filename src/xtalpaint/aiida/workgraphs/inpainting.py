@@ -143,7 +143,7 @@ def InpaintingWorkGraph(
 
         if relax.full_direct or relax.full:
             full_relax = relax.relax_config.model_dump(
-                exclude={"elements_to_relax"}
+                exclude={"params": {"elements_to_relax"}}
             )
 
         if relax.full_direct:

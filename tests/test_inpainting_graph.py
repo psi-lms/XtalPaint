@@ -1,8 +1,13 @@
-"""Build-only tests for the InpaintingWorkGraph task wiring."""
+"""Tests for the InpaintingWorkGraph: build-only wiring and execution."""
 
+import sys
+
+import numpy as np
 import pytest
+from aiida_workgraph.utils import get_or_create_code
 from pymatgen.core.structure import Structure
 
+from xtalpaint.aiida.data import BatchedStructuresData
 from xtalpaint.aiida.workgraphs.inpainting import InpaintingWorkGraph
 from xtalpaint.data import BatchedStructures
 from xtalpaint.inpainting.config_schema import (
@@ -41,18 +46,20 @@ def bcc_si():
     )
 
 
-def _relaxation(constrained=True, full=False, full_direct=False):
+def _relaxation(constrained=True, full=False, full_direct=False, **params):
+    base_params = dict(
+        mlip="mattersim",
+        optimizer="BFGS",
+        load_path="MatterSim-v1.0.0-1M",
+        elements_to_relax=["Si", "H"],
+    )
+    base_params.update(params)
     return InpaintingRelaxationConfig(
         constrained=constrained,
         full=full,
         full_direct=full_direct,
         relax_config=dict(
-            params=dict(
-                mlip="mattersim",
-                optimizer="BFGS",
-                load_path="MatterSim-v1.0.0-1M",
-                elements_to_relax=["Si", "H"],
-            ),
+            params=base_params,
             aiida=RelaxationAiiDAOptions(relax_code_label="python3@localhost"),
         ),
     )
@@ -129,6 +136,22 @@ class TestInpaintingWorkGraphStructure:
         for name in _RELAX_PASSES:
             assert bool(wg.outputs[name]["structures"]._links) == (name in expected)
 
+    def test_full_passes_drop_elements_to_relax(self, bcc_si):
+        wg = _build(bcc_si, relaxation=_relaxation(True, True, True))
+
+        def params(task_name):
+            return wg.tasks[task_name].inputs.relax_config.params._value
+
+        assert params("inpainted_constrained_relaxation")[
+            "elements_to_relax"
+        ] == ["Si", "H"]
+        assert "elements_to_relax" not in params(
+            "unrelaxed_inpainted_full_relaxation"
+        )
+        assert "elements_to_relax" not in params(
+            "pre_relaxed_inpainted_full_relaxation"
+        )
+
     @pytest.mark.parametrize(
         "flags",
         [
@@ -139,3 +162,57 @@ class TestInpaintingWorkGraphStructure:
     def test_invalid_pass_combinations_rejected(self, flags):
         with pytest.raises(ValueError):
             _relaxation(**flags)
+
+
+# ---------------------------------------------------------------------------
+# Execution test: runs MatterGen inpainting + MatterSim relaxation
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def python3_code(aiida_localhost):
+    """``python3@localhost`` code running the current interpreter."""
+    return get_or_create_code(code_path=sys.executable)
+
+
+class TestInpaintingWorkGraphExecution:
+    """Integration test: execute the full WorkGraph on localhost.
+
+    Covers candidate generation → diffusion inpainting → constrained
+    relaxation, with all pythonjob tasks running through the
+    ``python3@localhost`` code.
+    """
+
+    def test_full_pipeline(self, aiida_profile, python3_code, bcc_si):
+        wg = _build(
+            bcc_si,
+            candidate_generation=CandidateGenerationConfig(
+                n_inp=2, element="H", num_samples=2
+            ),
+            relaxation=_relaxation(
+                elements_to_relax=["H"], fmax=0.1, max_n_steps=100
+            ),
+            aiida=AiiDAOptions(default_code_label="python3@localhost"),
+        )
+        wg.run()
+        assert wg.process.is_finished_ok, "WorkGraph did not finish successfully"
+
+        sample_keys = {"s_sample_0", "s_sample_1"}
+
+        # Inpainted structures: one per sample, each with two H sites added.
+        inpainted = wg.outputs.inpainted_structures.value
+        assert isinstance(inpainted, BatchedStructuresData)
+        structures = inpainted.value.get_structures("pymatgen")
+        assert set(structures.keys()) == sample_keys
+        for s in structures.values():
+            assert s.composition["H"] == 2
+            assert len(s) == len(bcc_si) + 2
+
+        # Constrained relaxation: structures and finite energies per sample.
+        relaxed = wg.outputs.inpainted_constrained_relaxation.structures.value
+        assert set(relaxed.value.keys()) == sample_keys
+        energies = (
+            wg.outputs.inpainted_constrained_relaxation.final_energies.value.value
+        )
+        assert set(energies.index) == sample_keys
+        assert np.isfinite(energies["final_energy"]).all()
