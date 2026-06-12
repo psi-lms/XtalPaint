@@ -15,6 +15,9 @@ from xtalpaint.aiida.tasks.relax_parallel_utils import (
     _relax_mpi_parallel,
 )
 from xtalpaint.eval import evaluate_inpainting
+from xtalpaint.inpainting.config_schema import (
+    RelaxationParams,
+)
 from xtalpaint.inpainting.generate_candidates import (
     generate_inpainting_candidates,
 )
@@ -106,7 +109,7 @@ def relaxation_task(
     structures: t.Union[
         dict[str, Structure], BatchedStructuresData, BatchedStructures
     ],
-    relax_inputs: dict,
+    relax_inputs: RelaxationParams,
     usempi: bool = False,
 ) -> dict:
     """Wrapper for the relaxation function to be used in a WorkGraph."""

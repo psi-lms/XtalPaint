@@ -6,9 +6,9 @@ from ase import Atoms
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic.config import ConfigDict
 from pymatgen.core import Structure
+from typing_extensions import NotRequired, TypedDict
 
-from xtalpaint.data import BatchedStructures
-from xtalpaint.utils import _is_batched_structure, is_aiida_installed
+from xtalpaint.utils import is_aiida_installed
 
 
 def _is_valid_structure_type(obj) -> bool:
@@ -32,6 +32,8 @@ def _is_valid_structure_type(obj) -> bool:
 class CandidateGenerationConfig(BaseModel):
     """Configuration for generating inpainting candidates."""
 
+    model_config = {"leaf": True}
+
     n_inp: int | dict[str, int]
     element: str | dict[str, str]
     num_samples: int = 1
@@ -39,6 +41,8 @@ class CandidateGenerationConfig(BaseModel):
 
 class InpaintingConfig(BaseModel):
     """Configuration for the diffusion inpainting stage."""
+
+    model_config = {"leaf": True}
 
     # Model — exactly one of these must be provided
     pretrained_name: Optional[str] = None
@@ -102,6 +106,9 @@ class InpaintingConfig(BaseModel):
 class RefinementConfig(BaseModel):
     """Symmetry refinement stage."""
 
+    model_config = {"leaf": True}
+
+    include_task: bool = False
     symprec: float = 0.01
     primitive: bool = False
 
@@ -109,6 +116,9 @@ class RefinementConfig(BaseModel):
 class UniquenessConfig(BaseModel):
     """Parameters for post-relaxation uniqueness/deduplication filtering."""
 
+    model_config = {"leaf": True}
+
+    include_task: bool = False
     symprec: float = 0.01
     ltol: float = 0.2
     stol: float = 0.3
@@ -124,15 +134,17 @@ class RelaxationParams(BaseModel):
     ``InpaintingRelaxationConfig``.
     """
 
+    model_config = {"leaf": True}
+
     mlip: str
     optimizer: str
+    load_path: str
     fmax: float = 0.05
     max_n_steps: int = 500
     max_natoms_per_batch: int = 512
     device: str = "cpu"
-    filter: Optional[str] = None
-    load_path: Optional[str] = None
-    elements_to_relax: Optional[list[str]] = None
+    filter: Optional[str] = "none"
+    elements_to_relax: Optional[list[str]] | None = Field(default_factory=list)
     return_initial_energies: bool = False
     return_initial_forces: bool = False
     return_final_forces: bool = False
@@ -143,35 +155,34 @@ class RelaxationParams(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class AiiDATaskOptions(BaseModel):
+class AiiDATaskOptions(TypedDict):
     """AiiDA scheduler and resource options for a single task."""
 
-    resources: dict = Field(default_factory=dict)
-    max_wallclock_seconds: Optional[int] = None
-    queue_name: Optional[str] = None
-    withmpi: bool = False
+    resources: dict
+    max_wallclock_seconds: NotRequired[int]
+    queue_name: NotRequired[str]
+    withmpi: bool
+
+
+def _default_task_options() -> AiiDATaskOptions:
+    return {"resources": {}, "withmpi": False}
 
 
 class RelaxationAiiDAOptions(BaseModel):
     """AiiDA options for the three tasks inside ``relaxation_graph``.
 
-    Place this in ``RelaxationGraphConfig.aiida``; it is ignored in
-    non-AiiDA (plain Python) execution.
-
-    ``refinement_options`` and ``uniqueness_options`` fall back to
-    ``relax_options`` when not set, so you only need to override them when
-    the refinement/uniqueness tasks run on a different resource allocation.
-    Similarly, ``refinement_code_label`` and ``uniqueness_code_label`` fall
-    back to ``relax_code_label``.
+    Place this in ``RelaxationGraphConfig.aiida``.
     """
 
-    relax_code_label: Optional[str] = None
+    model_config = {"leaf": True}
+
+    relax_code_label: str
     refinement_code_label: Optional[str] = None
     uniqueness_code_label: Optional[str] = None
 
-    relax_options: AiiDATaskOptions = Field(default_factory=AiiDATaskOptions)
-    refinement_options: Optional[AiiDATaskOptions] = None
-    uniqueness_options: Optional[AiiDATaskOptions] = None
+    relax_options: dict = Field(default_factory=_default_task_options)
+    refinement_options: dict = Field(default_factory=_default_task_options)
+    uniqueness_options: dict = Field(default_factory=_default_task_options)
 
 
 class RelaxationGraphConfig(BaseModel):
@@ -182,35 +193,19 @@ class RelaxationGraphConfig(BaseModel):
     ``relaxation_graph`` can apply after each pass.
 
     This class is the direct input type for ``relaxation_graph``.
-    ``InpaintingRelaxationConfig`` extends it with multi-pass orchestration
-    flags for use inside the inpainting WorkGraph.
     """
 
-    # Core relaxation parameters (forwarded as relax_inputs
-    # to relax_structures)
     params: RelaxationParams
 
-    # Post-relaxation steps — presence means enabled, None means skip
-    refinement: Optional[RefinementConfig] = None
-    uniqueness: Optional[UniquenessConfig] = None
+    # refinement: Optional[RefinementConfig] | None = None# | bool = False
+    refinement: RefinementConfig = Field(default_factory=RefinementConfig)
+    # uniqueness: Optional[UniquenessConfig] | None = None# | bool = False
+    uniqueness: UniquenessConfig = Field(default_factory=UniquenessConfig)
 
-    # AiiDA options (ignored in plain-Python execution)
-    aiida: Optional[RelaxationAiiDAOptions] = None
-
-    def relax_inputs(self, constrained: bool = True) -> dict:
-        """Build the ``relax_inputs`` kwargs dict for ``relax_structures()``.
-
-        Args:
-            constrained: If True, include ``elements_to_relax`` so that only
-                those elements are relaxed.  Pass False for full-relax passes
-                where all atoms move freely.
-        """
-        if constrained:
-            return self.params.model_dump()
-        return self.params.model_dump(exclude={"elements_to_relax"})
+    aiida: Optional[RelaxationAiiDAOptions]  # = None
 
 
-class InpaintingRelaxationConfig(RelaxationGraphConfig):
+class InpaintingRelaxationConfig(BaseModel):
     """Configuration for the relaxation stage in the inpainting workflow.
 
     Extends ``RelaxationGraphConfig`` with multi-pass orchestration flags
@@ -238,6 +233,10 @@ class InpaintingRelaxationConfig(RelaxationGraphConfig):
     full: bool = False
     full_direct: bool = False
 
+    relax_config: RelaxationGraphConfig = Field(
+        default_factory=RelaxationGraphConfig
+    )
+
     @model_validator(mode="after")
     @classmethod
     def validate_passes(cls, cfg):
@@ -247,7 +246,10 @@ class InpaintingRelaxationConfig(RelaxationGraphConfig):
                 "At least one of 'constrained', 'full', or 'full_direct' "
                 "must be True."
             )
-        if cfg.constrained and cfg.params.elements_to_relax is None:
+        if (
+            cfg.constrained
+            and cfg.relax_config.params.elements_to_relax is None
+        ):
             raise ValueError(
                 "'params.elements_to_relax' must be set when "
                 "'constrained=True'."
@@ -277,23 +279,18 @@ class AiiDAOptions(BaseModel):
     pre_refinement_code_label: Optional[str] = None
 
     inpainting_options: AiiDATaskOptions = Field(
-        default_factory=AiiDATaskOptions
+        default_factory=_default_task_options
     )
     candidate_generation_options: AiiDATaskOptions = Field(
-        default_factory=AiiDATaskOptions
+        default_factory=_default_task_options
     )
     pre_refinement_options: AiiDATaskOptions = Field(
-        default_factory=AiiDATaskOptions
+        default_factory=_default_task_options
     )
 
     def get_code_label(self, specific: Optional[str] = None) -> Optional[str]:
         """Return *specific* code label, falling back to the default."""
         return specific or self.default_code_label
-
-
-# ---------------------------------------------------------------------------
-# Top-level config
-# ---------------------------------------------------------------------------
 
 
 class XtalPaintConfig(BaseModel):
@@ -315,7 +312,6 @@ class XtalPaintConfig(BaseModel):
     Example (minimal)::
 
         XtalPaintConfig(
-            structures={"si_001": structure},
             inpainting=InpaintingConfig(
                 pretrained_name="mattergen_base",
                 predictor_corrector="baseline",
@@ -327,7 +323,6 @@ class XtalPaintConfig(BaseModel):
     Example (with relaxation + deduplication on AiiDA)::
 
         XtalPaintConfig(
-            structures=...,
             candidate_generation=CandidateGenerationConfig(
                 n_inp={"H": 2}, element="H"
             ),
@@ -356,7 +351,6 @@ class XtalPaintConfig(BaseModel):
         )
     """
 
-    structures: BatchedStructures | dict[str, Structure]
     run_inpainting: bool = True
     candidate_generation: Optional[CandidateGenerationConfig] = None
     pre_refinement: Optional[RefinementConfig] = None
@@ -365,36 +359,6 @@ class XtalPaintConfig(BaseModel):
     aiida: Optional[AiiDAOptions] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @field_validator("structures")
-    @classmethod
-    def validate_structures(cls, v):
-        """Validate `structures` type."""
-        structures = v
-        if _is_batched_structure(v):
-            structures = v.get_structures(strct_type="pymatgen")
-        elif not isinstance(v, dict):
-            raise TypeError(
-                f"Expected a dictionary or BatchedStructures, got {type(v)}"
-            )
-        if not all(isinstance(k, str) for k in structures.keys()):
-            raise TypeError("All keys in the dictionary must be strings")
-        if not all(_is_valid_structure_type(s) for s in structures.values()):
-            raise TypeError(
-                "All values in the dictionary must be of type StructureData, "
-                "Structure, ase.Atoms, or InpaintingStructureData"
-            )
-        types = {type(s) for s in structures.values()}
-        if len(types) > 1:
-            raise TypeError(
-                "All values in the dictionary must be of the same type"
-            )
-        return v
-
-
-# ---------------------------------------------------------------------------
-# Evaluation parameters (standalone — not part of the inpainting workflow)
-# ---------------------------------------------------------------------------
 
 
 class EvalParameters(BaseModel):
