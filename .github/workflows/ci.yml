@@ -50,4 +50,5 @@ jobs:
 
     - name: Run tests with pytest
       run: |
+        verdi status
         uv run pytest
