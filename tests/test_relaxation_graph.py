@@ -84,9 +84,17 @@ class TestRelaxationGraphStructure:
 
     def _build(self, structures, refine=False, filter_unique=False, **kwargs):
         relax_config = RelaxationGraphConfig(
-            params=RelaxationParams(mlip="mattersim", optimizer="BFGS"),
-            refinement=RefinementConfig() if refine else None,
-            uniqueness=UniquenessConfig() if filter_unique else None,
+            params=RelaxationParams(
+                mlip="mattersim", optimizer="BFGS",
+                load_path='MatterSim-v1.0.0-1M'
+                ),
+            refinement=RefinementConfig(include_task=refine),
+            uniqueness=UniquenessConfig(include_task=filter_unique),
+            aiida=dict(
+                relax_code_label="python3",
+                refinement_code_label="python3",
+                uniqueness_code_label="python3",
+            )
         )
         return relaxation_graph.build(
             structures=structures,
@@ -94,22 +102,22 @@ class TestRelaxationGraphStructure:
             **kwargs,
         )
 
-    def test_base_contains_only_relaxation_task(self, bcc_si):
+    def test_base_contains_only_relaxation_task(self, fixture_localhost, bcc_si):
         wg = self._build(BatchedStructures({"s": bcc_si}))
         assert _user_tasks(wg) == {"relaxation_task"}
 
-    def test_refine_flag_adds_refinement_task(self, bcc_si):
+    def test_refine_flag_adds_refinement_task(self, fixture_localhost, bcc_si):
         wg = self._build(BatchedStructures({"s": bcc_si}), refine=True)
         assert _user_tasks(wg) == {"relaxation_task", "refine_structures"}
 
-    def test_filter_unique_flag_adds_uniqueness_task(self, bcc_si):
+    def test_filter_unique_flag_adds_uniqueness_task(self, fixture_localhost, bcc_si):
         wg = self._build(BatchedStructures({"s": bcc_si}), filter_unique=True)
         assert _user_tasks(wg) == {
             "relaxation_task",
             "filter_unique_structures",
         }
 
-    def test_both_flags_produce_full_chain(self, bcc_si):
+    def test_both_flags_produce_full_chain(self, fixture_localhost, bcc_si):
         wg = self._build(
             BatchedStructures({"s": bcc_si}), refine=True, filter_unique=True
         )
@@ -124,7 +132,7 @@ class TestRelaxationGraphStructure:
         [(False, False), (True, False), (False, True), (True, True)],
     )
     def test_structures_and_energies_always_in_outputs(
-        self, bcc_si, refine, filter_unique
+        self, fixture_localhost, bcc_si, refine, filter_unique
     ):
         wg = self._build(
             BatchedStructures({"s": bcc_si}),
@@ -134,7 +142,7 @@ class TestRelaxationGraphStructure:
         assert "structures" in wg.outputs
         assert "final_energies" in wg.outputs
 
-    def test_optional_force_energy_sockets_declared(self, bcc_si):
+    def test_optional_force_energy_sockets_declared(self, fixture_localhost, bcc_si):
         """initial_energies / initial_forces / final_forces are declared as
         optional sockets even though they are only populated at runtime when
         requested via relax_inputs."""
@@ -152,7 +160,7 @@ class TestRelaxationGraphStructure:
         ],
     )
     def test_structures_output_linked_to_last_active_task(
-        self, bcc_si, refine, filter_unique, expected_src
+        self, fixture_localhost, bcc_si, refine, filter_unique, expected_src
     ):
         """The graph-level ``structures`` output must be wired to the final
         step in the active chain, not hardcoded to the relaxation task."""
@@ -302,6 +310,7 @@ _MATTERSIM_PARAMS = RelaxationParams(
     device="cpu",
     fmax=0.1,
     max_n_steps=100,
+    load_path='MatterSim-v1.0.0-1M'
 )
 
 
@@ -327,7 +336,11 @@ class TestRelaxationGraphExecution:
     def _build_and_run(self, structures: dict, filter_unique=False):
         relax_config = RelaxationGraphConfig(
             params=_MATTERSIM_PARAMS,
-            uniqueness=UniquenessConfig() if filter_unique else None,
+            uniqueness=UniquenessConfig(include_task=filter_unique),
+            aiida=dict(
+                relax_code_label="python3@localhost",
+                uniqueness_code_label="python3@localhost",
+            )
         )
         wg = relaxation_graph.build(
             structures=BatchedStructures(structures),
