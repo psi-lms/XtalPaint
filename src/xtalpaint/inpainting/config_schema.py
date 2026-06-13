@@ -6,9 +6,9 @@ from ase import Atoms
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic.config import ConfigDict
 from pymatgen.core import Structure
+from typing_extensions import NotRequired, TypedDict
 
-from xtalpaint.data import BatchedStructures
-from xtalpaint.utils import _is_batched_structure, is_aiida_installed
+from xtalpaint.utils import is_aiida_installed
 
 
 def _is_valid_structure_type(obj) -> bool:
@@ -24,61 +24,40 @@ def _is_valid_structure_type(obj) -> bool:
     return False
 
 
-def _is_inpainting_structure(obj) -> bool:
-    """Check if object is an InpaintingStructureData (requires AiiDA)."""
-    if is_aiida_installed():
-        from xtalpaint.aiida.data import InpaintingStructureData
+class CandidateGenerationConfig(BaseModel):
+    """Configuration for generating inpainting candidates."""
 
-        return isinstance(obj, InpaintingStructureData)
-    return False
+    model_config = {"leaf": True}
 
-
-class RelaxParameters(BaseModel):
-    """Configuration for the relaxation stage."""
-
-    load_path: str | None = None
-    fmax: float = 0.05
-    elements_to_relax: Optional[list[str]] = Field(
-        default=None,
-        description="List of elements to relax during optimization.",
-    )
-    max_natoms_per_batch: int = 512
-    max_n_steps: int = 500
-    device: str = "cpu"
-    filter: Optional[str] = None
-    optimizer: str
-    mlip: str
-    return_initial_energies: bool = False
-    return_initial_forces: bool = False
-    return_final_forces: bool = False
+    n_inp: int | dict[str, int]
+    element: str | dict[str, str]
+    num_samples: int = 1
 
 
-class InpaintingModelParams(BaseModel):
-    """Diffusion sampling parameters for the inpainting model."""
+class InpaintingConfig(BaseModel):
+    """Configuration for the diffusion inpainting stage."""
 
+    model_config = {"leaf": True}
+
+    pretrained_name: Optional[str] = None
+    model_path: Optional[str] = None
+
+    predictor_corrector: str
     N_steps: int
     coordinates_snr: float
     n_corrector_steps: int
     batch_size: int
+    fix_cell: bool = True
+    record_trajectories: bool = False
+    sampling_config_path: Optional[str] = None
+
     n_resample_steps: Optional[int] = None
     jump_length: Optional[int] = None
-
-
-class InpaintingPipelineParams(BaseModel):
-    """Settings for constructing an inpainting pipeline."""
-
-    predictor_corrector: str
-    fix_cell: bool = True
-    inpainting_model_params: InpaintingModelParams
-    pretrained_name: Optional[str] = None
-    model_path: Optional[str] = None
-    record_trajectories: Optional[bool] = False
-    sampling_config_path: Optional[str] = None
 
     @field_validator("predictor_corrector")
     @classmethod
     def validate_predictor_corrector(cls, v):
-        """Validator to ensure 'predictor_corrector' is a supported key."""
+        """Validate that predictor_corrector is one of the allowed options."""
         from xtalpaint.inpainting.inpainting_process import (
             GUIDED_PREDICTOR_CORRECTOR_MAPPING,
         )
@@ -93,11 +72,7 @@ class InpaintingPipelineParams(BaseModel):
     @model_validator(mode="after")
     @classmethod
     def check_pretrained_model_exclusive(cls, cfg):
-        """Validate model specification.
-
-        Ensure that either 'pretrained_name' or 'model_path' is provided,
-        but not both.
-        """
+        """Validate model specification."""
         if (
             cfg.pretrained_name is not None and cfg.model_path is not None
         ) or (cfg.pretrained_name is None and cfg.model_path is None):
@@ -110,28 +85,262 @@ class InpaintingPipelineParams(BaseModel):
     @model_validator(mode="after")
     @classmethod
     def check_repaint_requires_resample_and_jump(cls, cfg):
-        """Validate 'n_resample_steps' and 'jump_length'.
-
-        If 'predictor_corrector' contains 'repaint', both parameters must be
-        set in 'inpainting_model_params'.
-        """
+        """Validate RePaint-specific parameters."""
         if "repaint" in cfg.predictor_corrector.lower():
-            params = cfg.inpainting_model_params
-            if params.n_resample_steps is None or params.jump_length is None:
+            if cfg.n_resample_steps is None or cfg.jump_length is None:
                 raise ValueError(
                     "When 'predictor_corrector' contains 'repaint', "
-                    "inpainting_model_params must set both 'n_resample_steps' "
-                    "and 'jump_length'."
+                    "both 'n_resample_steps' and 'jump_length' must be set."
                 )
         return cfg
 
 
-class GenInpaintingCandidatesParams(BaseModel):
-    """Configuration for generating inpainting candidates."""
+class RefinementConfig(BaseModel):
+    """Symmetry refinement stage."""
 
-    n_inp: int | dict[str, int]
-    element: str | dict[str, str]
-    num_samples: int = 1
+    model_config = {"leaf": True}
+
+    include_task: bool = False
+    symprec: float = 0.01
+    primitive: bool = False
+
+
+class UniquenessConfig(BaseModel):
+    """Parameters for post-relaxation uniqueness/deduplication filtering."""
+
+    model_config = {"leaf": True}
+
+    include_task: bool = False
+    symprec: float = 0.01
+    ltol: float = 0.2
+    stol: float = 0.3
+    angle_tol: float = 5.0
+
+
+class RelaxationParams(BaseModel):
+    """Core relaxation parameters forwarded to ``relax_structures()``.
+
+    These are the settings that control *how* a single relaxation is run
+    (MLIP, optimiser, convergence criteria, etc.).  They are kept separate
+    from the inpainting-workflow-level controls in
+    ``InpaintingRelaxationConfig``.
+    """
+
+    model_config = {"leaf": True}
+
+    mlip: str
+    optimizer: str
+    load_path: str
+    fmax: float = 0.05
+    max_n_steps: int = 500
+    max_natoms_per_batch: int = 512
+    device: str = "cpu"
+    filter: Optional[str] = "none"
+    elements_to_relax: Optional[list[str]] | None = Field(default_factory=list)
+    return_initial_energies: bool = False
+    return_initial_forces: bool = False
+    return_final_forces: bool = False
+
+
+class AiiDATaskOptions(TypedDict):
+    """AiiDA scheduler and resource options for a single task."""
+
+    resources: dict
+    max_wallclock_seconds: NotRequired[int]
+    queue_name: NotRequired[str]
+    withmpi: bool
+
+
+def _default_task_options() -> AiiDATaskOptions:
+    return {"resources": {}, "withmpi": False}
+
+
+class RelaxationAiiDAOptions(BaseModel):
+    """AiiDA options for the three tasks inside ``relaxation_graph``.
+
+    Place this in ``RelaxationGraphConfig.aiida``.
+    """
+
+    model_config = {"leaf": True}
+
+    relax_code_label: str
+    refinement_code_label: Optional[str] = None
+    uniqueness_code_label: Optional[str] = None
+
+    relax_options: dict = Field(default_factory=_default_task_options)
+    refinement_options: dict = Field(default_factory=_default_task_options)
+    uniqueness_options: dict = Field(default_factory=_default_task_options)
+
+
+class RelaxationGraphConfig(BaseModel):
+    """Configuration for a single ``relaxation_graph`` call.
+
+    Bundles the core relaxation parameters with the optional post-relaxation
+    processing steps (symmetry refinement and uniqueness filtering) that
+    ``relaxation_graph`` can apply after each pass.
+
+    This class is the direct input type for ``relaxation_graph``.
+    """
+
+    params: RelaxationParams
+    refinement: RefinementConfig = Field(default_factory=RefinementConfig)
+    uniqueness: UniquenessConfig = Field(default_factory=UniquenessConfig)
+    aiida: Optional[RelaxationAiiDAOptions]  # = None
+
+
+class InpaintingRelaxationConfig(BaseModel):
+    """Configuration for the relaxation stage in the inpainting workflow.
+
+    Extends ``RelaxationGraphConfig`` with multi-pass orchestration flags
+    that are specific to the inpainting WorkGraph.  The three passes share
+    the same ``params`` and post-relaxation settings.
+
+    Pass names and their semantics
+    --------------------------------
+    constrained
+        Relax only the atoms listed in ``params.elements_to_relax``.  Requires
+        ``params.elements_to_relax`` to be set.  Labelled
+        ``inpainted_constrained_relaxation`` in the WorkGraph.
+    full
+        Run a full (all-atom) relaxation on the output of the constrained pass.
+        Requires ``constrained=True``.  Labelled
+        ``pre_relaxed_inpainted_full_relaxation``.
+    full_direct
+        Run a full relaxation directly on the inpainted structures, bypassing
+        the constrained pre-relax step (useful for comparison).  Labelled
+        ``unrelaxed_inpainted_full_relaxation``.
+    """
+
+    constrained: bool = True
+    full: bool = False
+    full_direct: bool = False
+
+    relax_config: RelaxationGraphConfig = Field(
+        default_factory=RelaxationGraphConfig
+    )
+
+    @model_validator(mode="after")
+    @classmethod
+    def validate_passes(cls, cfg):
+        """Validate relaxation modes."""
+        if not any([cfg.constrained, cfg.full, cfg.full_direct]):
+            raise ValueError(
+                "At least one of 'constrained', 'full', or 'full_direct' "
+                "must be True."
+            )
+        if (
+            cfg.constrained
+            and cfg.relax_config.params.elements_to_relax is None
+        ):
+            raise ValueError(
+                "'params.elements_to_relax' must be set when "
+                "'constrained=True'."
+            )
+        if cfg.full and not cfg.constrained:
+            raise ValueError(
+                "'full=True' requires 'constrained=True': the full-relax pass "
+                "runs on the output of the constrained pass."
+            )
+        return cfg
+
+
+class AiiDAOptions(BaseModel):
+    """AiiDA-specific settings: code labels and per-task scheduler options.
+
+    Place this in ``XtalPaintConfig.aiida``; it is ignored entirely in
+    non-AiiDA (plain Python) execution.
+
+    Relaxation-specific AiiDA settings live in
+    ``RelaxationGraphConfig.aiida`` (or ``InpaintingRelaxationConfig.aiida``)
+    rather than here, so they can be co-located with the relaxation config.
+    """
+
+    default_code_label: Optional[str] = None
+    inpainting_code_label: Optional[str] = None
+    candidate_generation_code_label: Optional[str] = None
+    pre_refinement_code_label: Optional[str] = None
+
+    inpainting_options: AiiDATaskOptions = Field(
+        default_factory=_default_task_options
+    )
+    candidate_generation_options: AiiDATaskOptions = Field(
+        default_factory=_default_task_options
+    )
+    pre_refinement_options: AiiDATaskOptions = Field(
+        default_factory=_default_task_options
+    )
+
+    def get_code_label(self, specific: Optional[str] = None) -> Optional[str]:
+        """Return *specific* code label, falling back to the default."""
+        return specific or self.default_code_label
+
+
+class XtalPaintConfig(BaseModel):
+    """Complete configuration for the XtalPaint inpainting workflow.
+
+    Works for both AiiDA-based (WorkGraph) and plain-Python execution.
+    AiiDA-specific settings live in the optional ``aiida`` block and are
+    ignored in non-AiiDA runs.
+
+    Pipeline stages are controlled by presence/absence of their config
+    objects — no boolean flags required:
+
+    * ``candidate_generation`` — omit if structures are already
+      ``InpaintingStructureData`` objects.
+    * ``pre_refinement`` — symmetry-refine structures before relaxation;
+      omit to skip.
+    * ``relaxation`` — geometry optimisation; omit to skip.
+
+    Example (minimal)::
+
+        XtalPaintConfig(
+            inpainting=InpaintingConfig(
+                pretrained_name="mattergen_base",
+                predictor_corrector="baseline",
+                N_steps=5, coordinates_snr=0.2,
+                n_corrector_steps=1, batch_size=1000,
+            ),
+        )
+
+    Example (with relaxation + deduplication on AiiDA)::
+
+        XtalPaintConfig(
+            candidate_generation=CandidateGenerationConfig(
+                n_inp={"H": 2}, element="H"
+            ),
+            inpainting=InpaintingConfig(...),
+            pre_refinement=RefinementConfig(symprec=0.01),
+            relaxation=InpaintingRelaxationConfig(
+                params=RelaxationParams(
+                    mlip="mattersim",
+                    optimizer="BFGS",
+                    elements_to_relax=["H"],
+                    fmax=0.01,
+                ),
+                full=True,
+                uniqueness=UniquenessConfig(),
+                aiida=RelaxationAiiDAOptions(
+                    relax_code_label="relax@hpc",
+                    relax_options=AiiDATaskOptions(
+                        resources={"num_machines": 1},
+                        withmpi=True,
+                    ),
+                ),
+            ),
+            aiida=AiiDAOptions(
+                default_code_label="xtalpaint@localhost",
+            ),
+        )
+    """
+
+    run_inpainting: bool = True
+    candidate_generation: Optional[CandidateGenerationConfig] = None
+    pre_refinement: Optional[RefinementConfig] = None
+    inpainting: InpaintingConfig
+    relaxation: Optional[InpaintingRelaxationConfig] = None
+    aiida: Optional[AiiDAOptions] = None
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class EvalParameters(BaseModel):
@@ -141,116 +350,3 @@ class EvalParameters(BaseModel):
     chunksize: int = 50
     metrics: str | list[str] = "match"
     code_label: Optional[str] = None
-
-
-class InpaintingWorkflowConfig(BaseModel):
-    """Top-level configuration for a XtalPaint inpainting workflow.
-
-    This config can be used for both AiiDA-based workflows (WorkGraphs)
-    and regular Python-based workflows.
-    """
-
-    structures: BatchedStructures | dict[str, Structure]
-    run_inpainting: bool = True
-    inpainting_pipeline_params: InpaintingPipelineParams
-    gen_inpainting_candidates_params: Optional[
-        GenInpaintingCandidatesParams
-    ] = None
-    code_label: Optional[str] = None
-    relax_code_label: Optional[str] = None
-    inpainting_code_label: Optional[str] = None
-    relax: Optional[bool] = False
-    relax_kwargs: Optional[RelaxParameters] = {}
-    full_relax: Optional[bool] = False
-    full_relax_wo_pre_relax: Optional[bool] = False
-    options: Optional[dict] = {}
-    relax_options: Optional[dict] = {}
-    gen_inpainting_candidates_options: Optional[dict] = {}
-    inpainting_pipeline_options: Optional[dict] = {}
-    evaluate: Optional[bool] = False
-    evaluate_params: Optional[EvalParameters] = None
-    refine_structures: bool = False
-    refine_structures_after_relax: bool = False
-    refinement_symprec: float = 0.01
-    refinement_primitive: bool = False
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @field_validator("structures")
-    @classmethod
-    def validate_structures(cls, v):
-        """Validate input structures.
-
-        Ensure 'structures' is a dictionary with string keys and values of
-        uniform, supported types.
-
-        Raises:
-            TypeError: If the structure mapping is not valid.
-        """
-        structures = v
-        if _is_batched_structure(v):
-            structures = v.get_structures(strct_type="pymatgen")
-        elif not isinstance(v, dict):
-            raise TypeError(
-                f"Expected a dictionary or BatchedStructures, got {type(v)}"
-            )
-        if not all(isinstance(k, str) for k in structures.keys()):
-            raise TypeError("All keys in the dictionary must be strings")
-        if not all(_is_valid_structure_type(s) for s in structures.values()):
-            raise TypeError(
-                "All values in the dictionary must be of type StructureData, "
-                "Structure, ase.Atoms, or InpaintingStructureData"
-            )
-
-        types = {type(s) for s in structures.values()}
-        if len(types) > 1:
-            raise TypeError(
-                "All values in the dictionary must be of the same type"
-            )
-        return v
-
-    @model_validator(mode="after")
-    @classmethod
-    def check_n_inp_for_structures(cls, cfg):
-        """Validate inputs for inpainting candidates.
-
-        Ensure that 'gen_inpainting_candidates_params' is provided when
-        structures are not already inpainting structure instances.
-        """
-        values = (
-            list(cfg.structures.values())
-            if isinstance(cfg.structures, dict)
-            else cfg.structures.get_structures(strct_type="pymatgen")
-        )
-        if not all(
-            _is_inpainting_structure(s) or isinstance(s, Structure)
-            for s in values
-        ):
-            if cfg.gen_inpainting_candidates_params is None:
-                raise ValueError(
-                    "If structures are not InpaintingStructure objects, "
-                    "gen_inpainting_candidates_params must be provided."
-                )
-        return cfg
-
-    @model_validator(mode="after")
-    @classmethod
-    def check_evaluate_inpainting_structures(cls, cfg):
-        """Check if structures are already InpaintingStructure objects."""
-        if cfg.evaluate and cfg.is_inpainting_structures:
-            raise ValueError(
-                "If 'evaluate' is True, structures must not be "
-                "InpaintingStructure objects. We need the original structures "
-                "to compare against inpainted structures."
-            )
-        return cfg
-
-    @property
-    def is_inpainting_structures(self) -> bool:
-        """Check if structures are already InpaintingStructure objects."""
-        structures = (
-            self.structures.values()
-            if isinstance(self.structures, dict)
-            else self.structures.get_structures(strct_type="pymatgen")
-        )
-        return all(_is_inpainting_structure(s) for s in structures)

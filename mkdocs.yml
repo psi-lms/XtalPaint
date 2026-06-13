@@ -49,6 +49,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Configuration Guide: configuration.md
   - Examples:
       - Running with AiiDA: examples/running-with-AiiDA.ipynb
       - Running without AiiDA: examples/running-wo-AiiDA.ipynb

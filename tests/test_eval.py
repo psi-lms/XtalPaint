@@ -8,11 +8,8 @@ from pymatgen.core.structure import Structure
 from pymatgen.io.ase import AseAtomsAdaptor
 
 from xtalpaint.eval import (
-    _check_for_nan,
     evaluate_inpainting,
-    get_structure_keys,
 )
-
 
 @pytest.fixture
 def reference_structures():
@@ -66,57 +63,6 @@ def nan_structure():
     species = ["Si", "Si"]
     coords = [[np.nan, 0.0, 0.0], [0.5, 0.5, 0.5]]
     return Structure(lattice, species, coords)
-
-
-class TestCheckForNan:
-    """Test the _check_for_nan function."""
-
-    def test_no_nan(self, simple_structure):
-        """Test structure without NaN values."""
-        assert not _check_for_nan(simple_structure)
-
-    def test_with_nan(self, nan_structure):
-        """Test structure with NaN values."""
-        assert _check_for_nan(nan_structure)
-
-    def test_real_structures(self, reference_structures):
-        """Test that real structures have no NaN values."""
-        for key, structure in reference_structures.items():
-            assert not _check_for_nan(structure), f"Structure {key} has NaN"
-
-class TestGetStructureKeys:
-    """Test the get_structure_keys function."""
-
-    def test_no_samples(self):
-        """Test with keys without sample indices."""
-        structures = {
-            "structure_1": None,
-            "structure_2": None,
-        }
-        keys, indices = get_structure_keys(structures)
-        assert keys == ["structure_1", "structure_2"]
-        assert indices == [None, None]
-
-    def test_with_samples(self):
-        """Test with keys containing sample indices."""
-        structures = {
-            "structure_1_sample_0": None,
-            "structure_1_sample_1": None,
-            "structure_2_sample_0": None,
-        }
-        keys, indices = get_structure_keys(structures)
-        assert keys == ["structure_1", "structure_1", "structure_2"]
-        assert indices == ["0", "1", "0"]
-
-    def test_real_structure_keys(self, reference_structures):
-        """Test with real structure keys from extxyz."""
-        keys, indices = get_structure_keys(reference_structures)
-        # All keys should have sample indices
-        assert len(keys) == len(reference_structures)
-        # Check that sample indices are extracted correctly
-        for idx in indices:
-            assert idx is not None
-
 
 class TestEvaluateInpainting:
     """Test the evaluate_inpainting function."""

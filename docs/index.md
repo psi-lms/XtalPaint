@@ -1,6 +1,5 @@
 # XtalPaint – A framework for crystal structure inpainting based on diffusion models
 
-
 Welcome to the `XtalPaint` Documentation.
 
 ## Overview
@@ -16,10 +15,12 @@ Welcome to the `XtalPaint` Documentation.
 
 ## Getting Started
 
-Check out the examples on to run the inpainting pipeline:
+Read the [Configuration Guide](configuration.md) to learn how to specify workflows and understand the AiiDA vs. plain-Python execution modes.
 
-* [With AiiDA integration](examples/running-with-AiiDA.ipynb)
-* [Without AiiDA integration](examples/running-wo-AiiDA.ipynb)
+Afterwards, check out the examples:
+
+- [With AiiDA integration](examples/running-with-AiiDA.ipynb)
+- [Without AiiDA integration](examples/running-wo-AiiDA.ipynb)
 
 ## Installation
 
@@ -39,7 +40,6 @@ uv pip install .[aiida]
 ### Model checkpoints for retrained versions of MatterGen
 
 Model checkpoints for the retrained versions of MatterGen used in our work can be downloaded from [Hugging Face](https://huggingface.co/t-reents/XtalPaint). Currently, the repository contains the `pos-only` and `TD-pos-only` models discussed in the paper.
-
 
 ## Acknowledgements
 

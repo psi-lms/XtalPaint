@@ -2082,7 +2082,7 @@ wheels = [
 [[package]]
 name = "mattergen"
 version = "1.0.3"
-source = { git = "https://github.com/microsoft/mattergen?rev=v1.0.3#842ffe735f7d06cec89d56aa23d9f001e1124b30" }
+source = { git = "https://github.com/microsoft/mattergen?rev=94441ee60efc01e8a5651fdfddf4a147f01db057#94441ee60efc01e8a5651fdfddf4a147f01db057" }
 dependencies = [
     { name = "ase" },
     { name = "autopep8" },
@@ -4446,7 +4446,7 @@ dependencies = [
     { name = "typing-extensions", marker = "sys_platform == 'linux'" },
 ]
 wheels = [
-    { url = "https://download.pytorch.org/whl/cu118/torch-2.2.1%2Bcu118-cp310-cp310-linux_x86_64.whl", hash = "sha256:438668ad1eec3a7d1a0473ebf8b60f4557e51548d6be0497d32cc6c3a26a1945" },
+    { url = "https://download-r2.pytorch.org/whl/cu118/torch-2.2.1%2Bcu118-cp310-cp310-linux_x86_64.whl", hash = "sha256:438668ad1eec3a7d1a0473ebf8b60f4557e51548d6be0497d32cc6c3a26a1945", upload-time = "2024-03-18T17:58:16Z" },
 ]
 
 [[package]]
@@ -4702,7 +4702,7 @@ dependencies = [
     { name = "torch", version = "2.2.1+cu118", source = { registry = "https://download.pytorch.org/whl/cu118" }, marker = "sys_platform == 'linux'" },
 ]
 wheels = [
-    { url = "https://download.pytorch.org/whl/cu118/torchaudio-2.2.1%2Bcu118-cp310-cp310-linux_x86_64.whl", hash = "sha256:734db8030b3c5ff6bb4135b0d0a9eec79690900c5b5edd259f230b02d6fbcb04" },
+    { url = "https://download-r2.pytorch.org/whl/cu118/torchaudio-2.2.1%2Bcu118-cp310-cp310-linux_x86_64.whl", hash = "sha256:734db8030b3c5ff6bb4135b0d0a9eec79690900c5b5edd259f230b02d6fbcb04", upload-time = "2024-03-18T18:09:38Z" },
 ]
 
 [[package]]
@@ -4764,7 +4764,7 @@ dependencies = [
     { name = "torch", version = "2.2.1+cu118", source = { registry = "https://download.pytorch.org/whl/cu118" }, marker = "sys_platform == 'linux'" },
 ]
 wheels = [
-    { url = "https://download.pytorch.org/whl/cu118/torchvision-0.17.1%2Bcu118-cp310-cp310-linux_x86_64.whl", hash = "sha256:dfe27be6328d85300ba9c2f3862993841c41a0daa4b4ba99c22e9fd509a21e2f" },
+    { url = "https://download-r2.pytorch.org/whl/cu118/torchvision-0.17.1%2Bcu118-cp310-cp310-linux_x86_64.whl", hash = "sha256:dfe27be6328d85300ba9c2f3862993841c41a0daa4b4ba99c22e9fd509a21e2f", upload-time = "2024-03-18T18:09:44Z" },
 ]
 
 [[package]]
@@ -5106,7 +5106,7 @@ requires-dist = [
     { name = "aiida-core", extras = ["tests"], marker = "extra == 'dev'", specifier = ">=2.7.0" },
     { name = "aiida-workgraph", marker = "extra == 'aiida'", specifier = "~=0.8.1" },
     { name = "ase", specifier = ">=3.25.0" },
-    { name = "mattergen", git = "https://github.com/microsoft/mattergen?rev=v1.0.3" },
+    { name = "mattergen", git = "https://github.com/microsoft/mattergen?rev=94441ee60efc01e8a5651fdfddf4a147f01db057" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6.1" },
     { name = "mkdocs-jupyter", marker = "extra == 'docs'", specifier = ">=0.25.1" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.7.0" },
