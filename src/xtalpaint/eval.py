@@ -3,7 +3,6 @@
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 
-import numpy as np
 import pandas as pd
 from mattergen.evaluation.utils.utils import compute_rmsd_angstrom
 from pymatgen.analysis.structure_matcher import StructureMatcher
@@ -12,12 +11,8 @@ from tqdm import tqdm
 
 from xtalpaint.data import BatchedStructures
 from xtalpaint.utils import _is_batched_structure
-
-
-def _check_for_nan(structure: Structure) -> bool:
-    """Check if a pymatgen Structure has NaN values in its atomic positions."""
-    positions = structure.cart_coords
-    return np.isnan(positions).any()
+from xtalpaint.utils.data_utils import get_structure_keys
+from xtalpaint.utils.structure_utils import check_for_nan_positions
 
 
 def _rmsd(strct1, strct2, normalization_element: str | None = None) -> float:
@@ -59,42 +54,13 @@ def _comparison_per_key(
     comparisons = []
     comp_func = COMPARISON_METHODS[metric]
     for sample_idx, sample in inpainted_structures_grouped[key]:
-        if _check_for_nan(sample):
+        if check_for_nan_positions(sample):
             comparison = None
         else:
             comparison = comp_func(sample, ref, **kwargs)
         comparisons.append((sample_idx, comparison))
 
     return comparisons
-
-
-def get_structure_keys(
-    structures: BatchedStructures | dict[str, Structure],
-) -> tuple[list[str], list[str | None]]:
-    """Get the unique keys of the structures with out sample indices.
-
-    This is used to group structures that are samples of the same
-    base structure.
-
-    Args:
-        structures (dict | BatchedStructures):
-            The structures to get the keys from.
-
-    Returns:
-        set[str]: The unique structure keys.
-    """
-    keys = structures.keys()
-    structure_keys = []
-    sample_indices = []
-    for key in keys:
-        if "_sample_" in key:
-            key, sample_idx = key.split("_sample_")
-        else:
-            sample_idx = None
-        structure_keys.append(key)
-        sample_indices.append(sample_idx)
-
-    return structure_keys, sample_indices
 
 
 def worker_init(ref_structures, inp_structures_grp):
