@@ -25,7 +25,31 @@ uv pip install .[aiida]
 
 ### Model checkpoints for retrained versions of MatterGen
 
-Model checkpoints for the retrained versions of MatterGen used in our work can be downloaded from [Hugging Face](https://huggingface.co/t-reents/XtalPaint). Currently, the repository contains the `pos-only` and `TD-pos-only` models discussed in the paper.
+Model checkpoints for the retrained versions of MatterGen used in our work are hosted on [Hugging Face](https://huggingface.co/t-reents/XtalPaint). Currently, the repository contains the `pos-only` and `TD-pos-only` models discussed in the paper.
+
+> [!IMPORTANT]
+> **The example below uses the `TD-pos-only` model — the core model of XtalPaint — which we recommend for accurate inpainting**, together with the time-dependent (`TD`) predictor-corrector. See the [documentation](https://psi-lms.github.io/XtalPaint/configuration/) for the available model and predictor-corrector combinations.
+
+Just like MatterGen's own checkpoints, the XtalPaint models are **downloaded automatically** the first time you select them by name — simply set `pretrained_name` to `"TD-pos-only"` (or `"pos-only"`):
+
+```python
+config = InpaintingConfig(
+    pretrained_name="TD-pos-only",   # auto-downloaded & cached from Hugging Face
+    predictor_corrector="TD",        # time-dependent predictor-corrector
+    N_steps=50,
+    coordinates_snr=0.2,
+    n_corrector_steps=1,
+    batch_size=100,
+)
+```
+
+You can also download a checkpoint explicitly and point `model_path` at it:
+
+```python
+from xtalpaint.models import download_pretrained_model
+
+model_path = download_pretrained_model("TD-pos-only")
+```
 
 ## Example
 
@@ -65,10 +89,13 @@ from xtalpaint.inpainting.inpainting_process import (
     run_inpainting_pipeline,
 )
 
-# Parameters for the inpainting, please adjust to reasonable values
+# Parameters for the inpainting, please adjust to reasonable values.
+# This uses our recommended `TD-pos-only` model, which is downloaded
+# automatically from Hugging Face the first time it is selected. See the
+# documentation for the available model/predictor-corrector combinations.
 config = InpaintingConfig(
-    pretrained_name="mattergen_base",
-    predictor_corrector="baseline",
+    pretrained_name="TD-pos-only",
+    predictor_corrector="TD",
     N_steps=50,
     coordinates_snr=0.2,
     n_corrector_steps=1,

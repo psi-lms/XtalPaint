@@ -19,6 +19,7 @@ from xtalpaint.generate_inpainting import (
     generate_reconstructed_structures,
 )
 from xtalpaint.inpainting.config_schema import InpaintingConfig
+from xtalpaint.models import resolve_inpainting_model
 from xtalpaint.utils.data_utils import create_dataloader
 
 XTALPAINT_BASE = "xtalpaint.predictor_corrector"
@@ -207,6 +208,14 @@ def _run_inpainting(
         Tuple of (inpainted_structures, trajectories, mean_trajectories).
         mean_trajectories is None if not recorded.
     """
+    # Resolve the model selection, auto-downloading XtalPaint checkpoints
+    # (e.g. TD-pos-only) from Hugging Face when selected by name.
+    pretrained_name, model_path = resolve_inpainting_model(
+        predictor_corrector=predictor_corrector,
+        pretrained_name=pretrained_name,
+        model_path=model_path,
+    )
+
     inpainting_model_params: dict[str, Any] = {
         "N_steps": N_steps,
         "coordinates_snr": coordinates_snr,

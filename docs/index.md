@@ -39,7 +39,24 @@ uv pip install .[aiida]
 
 ### Model checkpoints for retrained versions of MatterGen
 
-Model checkpoints for the retrained versions of MatterGen used in our work can be downloaded from [Hugging Face](https://huggingface.co/t-reents/XtalPaint). Currently, the repository contains the `pos-only` and `TD-pos-only` models discussed in the paper.
+Model checkpoints for the retrained versions of MatterGen used in our work are hosted on [Hugging Face](https://huggingface.co/t-reents/XtalPaint). Currently, the repository contains the `pos-only` and `TD-pos-only` models discussed in the paper.
+
+!!! tip "Recommended model: `TD-pos-only`"
+    The examples use the **retrained `TD-pos-only` model** — the core model of XtalPaint — together with the time-dependent (`TD`) predictor-corrector, which we recommend for accurate inpainting. See the [Configuration Guide](configuration.md) for the available model and predictor-corrector combinations.
+
+    Like MatterGen's own checkpoints, the XtalPaint models are downloaded automatically the first time you select them by name:
+
+    ```python
+    InpaintingConfig(
+        pretrained_name="TD-pos-only",   # auto-downloaded & cached from Hugging Face
+        predictor_corrector="TD",
+        ...,
+    )
+    ```
+
+    You can also download a checkpoint explicitly with
+    `xtalpaint.models.download_pretrained_model("TD-pos-only")` and pass the
+    returned path as `model_path`.
 
 ## Acknowledgements
 

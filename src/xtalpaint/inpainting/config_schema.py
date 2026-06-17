@@ -295,9 +295,9 @@ class XtalPaintConfig(BaseModel):
 
         XtalPaintConfig(
             inpainting=InpaintingConfig(
-                pretrained_name="mattergen_base",
-                predictor_corrector="baseline",
-                N_steps=5, coordinates_snr=0.2,
+                pretrained_name="TD-pos-only",
+                predictor_corrector="TD",
+                N_steps=50, coordinates_snr=0.2,
                 n_corrector_steps=1, batch_size=1000,
             ),
         )

@@ -111,11 +111,11 @@ The core diffusion stage. All sampling parameters live in one flat block.
 ```python
 inpainting=InpaintingConfig(
     # Model — provide exactly one of these:
-    pretrained_name="mattergen_base",   # use a bundled pretrained checkpoint
-    # model_path="/path/to/checkpoint", # or point to a local file
+    pretrained_name="TD-pos-only",      # XtalPaint model (auto-downloaded) or a MatterGen checkpoint
+    # model_path="/path/to/model_dir",  # or point to a local checkpoint directory
 
     # Sampling
-    predictor_corrector="baseline",     # see supported keys below
+    predictor_corrector="TD",           # see supported combinations below
     N_steps=5,
     coordinates_snr=0.2,
     n_corrector_steps=1,
@@ -128,7 +128,27 @@ inpainting=InpaintingConfig(
 )
 ```
 
-**Supported `predictor_corrector` values:**
+!!! tip "Recommended model: `TD-pos-only`"
+    `pretrained_name` accepts the XtalPaint models hosted on
+    [Hugging Face](https://huggingface.co/t-reents/XtalPaint) (`TD-pos-only`,
+    `pos-only`) as well as MatterGen's own checkpoints. The XtalPaint models are
+    downloaded automatically and cached the first time they are selected. For
+    accurate inpainting we **recommend the `TD-pos-only` model** — the core
+    model of XtalPaint — with the time-dependent (`TD`) predictor-corrector.
+
+    Alternatively, download a checkpoint explicitly and pass it as `model_path`:
+
+    ```python
+    from xtalpaint.models import download_pretrained_model
+
+    model_path = download_pretrained_model("TD-pos-only")
+    ```
+
+    Selecting `predictor_corrector="TD"` without the `TD-pos-only` model (or
+    pointing `model_path` at a checkpoint that has not been downloaded) raises
+    an error with these instructions.
+
+**Supported `predictor_corrector` values** — the `TD` variant requires the `TD-pos-only` model; the others are used with the `pos-only` model or a MatterGen checkpoint:
 
 | Key | Description |
 |---|---|
@@ -137,7 +157,7 @@ inpainting=InpaintingConfig(
 | `baseline-store-scores` | Records score function outputs |
 | `repaint-v1` | RePaint resampling (legacy) |
 | `repaint-v2` | RePaint resampling (v2) |
-| `TD` | Time-dependent (TD-Paint) variant |
+| `TD` | Time-dependent (TD-Paint) variant — requires the `TD-pos-only` model |
 
 !!! note "Repaint variants"
     When using `repaint-v1` or `repaint-v2`, you must also set `n_resample_steps` and `jump_length`:
@@ -245,8 +265,8 @@ from xtalpaint.utils.relaxation_utils import relax_structures
 config = XtalPaintConfig(
     candidate_generation=CandidateGenerationConfig(n_inp=2, element="H"),
     inpainting=InpaintingConfig(
-        model_path="/path/to/checkpoint.ckpt",
-        predictor_corrector="baseline",
+        pretrained_name="TD-pos-only",   # auto-downloaded from Hugging Face
+        predictor_corrector="TD",
         N_steps=5,
         coordinates_snr=0.2,
         n_corrector_steps=1,
@@ -376,8 +396,8 @@ wg.submit()
             element="H",
         ),
         inpainting=InpaintingConfig(
-            pretrained_name="mattergen_base",
-            predictor_corrector="baseline",
+            pretrained_name="TD-pos-only",
+            predictor_corrector="TD",
             N_steps=5,
             coordinates_snr=0.2,
             n_corrector_steps=1,
@@ -437,8 +457,8 @@ wg.submit()
             element="H",
         ),
         inpainting=InpaintingConfig(
-            pretrained_name="mattergen_base",
-            predictor_corrector="baseline",
+            pretrained_name="TD-pos-only",
+            predictor_corrector="TD",
             N_steps=5,
             coordinates_snr=0.2,
             n_corrector_steps=1,
