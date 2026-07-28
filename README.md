@@ -8,7 +8,16 @@
 `XtalPaint` is a Python package that provides tools to perform crystal structure inpainting, i.e. adding atomic sites to a given host structure, using score-based diffusion models. Here, we provide retrained versions of the [`MatterGen`](https://github.com/microsoft/mattergen) architecture and the building blocks to set up the inpainting workflows. The initial application in our latest work: [Score-based diffusion models for accurate crystal-structure inpainting and reconstruction of hydrogen positions](https://doi.org/10.48550/arXiv.2601.01959), focuses on adding missing hydrogen sites to inorganic crystal structures, but the framework can be adapted to other inpainting tasks as well, i.e. general crystal structure prediction based on given host structures (see other interesting works in the field, e.g. by [Zhong _et al._](https://pubs.rsc.org/en/content/articlehtml/2025/mh/d5mh00774g)).
 
 ## Installation
-The recommended way of installing the package is using [uv](https://docs.astral.sh/uv/getting-started/installation/).
+The recommended way of installing the package is using [uv](https://docs.astral.sh/uv/getting-started/installation/). Note that `XtalPaint` requires `Python 3.10`.
+
+If you don't have a virtual environment set up yet, you can create one using `uv` (the following example creates a virtual environment called `xtalpaint-env`, feel free to change the name):
+
+```bash
+uv venv xtalpaint-env --python 3.10
+source xtalpaint-env/bin/activate
+```
+
+Then, you can install the package from the GitHub repository:
 
 ```bash
 git clone https://github.com/psi-lms/XtalPaint.git
