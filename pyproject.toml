@@ -41,9 +41,9 @@ docs = [
     "nbconvert>=7.16.6",
 ]
 
-[tool.setuptools]
-packages = ["xtalpaint"]
-package-dir = {"" = "src"}
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["xtalpaint*"]
 
 # Ruff configuration
 [tool.ruff]
