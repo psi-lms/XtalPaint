@@ -38,6 +38,8 @@ from xtalpaint.data import BatchedStructures
 
 _XTALPAINT_SAMPLING_CONF = Path(__file__).parent / "sampling_conf"
 
+_XTALPAINT_SAMPLING_CONF = Path(__file__).parent / "sampling_conf"
+
 
 def draw_samples_from_sampler(
     sampler: PredictorCorrector,
