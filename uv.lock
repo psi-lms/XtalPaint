@@ -10,7 +10,7 @@ resolution-markers = [
 
 [[package]]
 name = "aiida-core"
-version = "2.7.1"
+version = "2.7.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "alembic" },
@@ -44,9 +44,9 @@ dependencies = [
     { name = "upf-to-json" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/69/c1/eae5691a741a66b7ce3daf107184d00b8563f924ec6326531d9d8b4006d6/aiida_core-2.7.1.tar.gz", hash = "sha256:18288a3999eaba8f0414135b6f9929eaefe13ec75c2593597ea6b51322657043", size = 1448571, upload-time = "2025-07-16T15:27:06.233Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a0/3b/6d6dda2db2304d73a34c30682ac1232fd2aebfedd0f9f7e6d7b241f5dea4/aiida_core-2.7.4.tar.gz", hash = "sha256:a73dc4fbc0e2b63ba703cea492d8ac808d5a271cf406d19a66dad8ac257ef98a", size = 1455055, upload-time = "2026-07-25T10:35:29.901Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/71/61/9a5bd094db9b1422d5e418b712889b1a3a7c3bdb18dec3a12b5f329e282b/aiida_core-2.7.1-py3-none-any.whl", hash = "sha256:befbb5514ec31b2caff934738cd7cae37aac121b5dcaaa1e4375757d6c159ee8", size = 1399403, upload-time = "2025-07-16T15:27:03.459Z" },
+    { url = "https://files.pythonhosted.org/packages/97/a0/8c962933f9b49886f7dba3009df8a83140d547606fb5649f91ce498cfdd1/aiida_core-2.7.4-py3-none-any.whl", hash = "sha256:be48255781c771847e6621d3bd84ee067edba156049a1a09cc1a27730be2021c", size = 1408576, upload-time = "2026-07-25T10:35:27.796Z" },
 ]
 
 [package.optional-dependencies]
@@ -5080,6 +5080,7 @@ dependencies = [
     { name = "numpy" },
     { name = "pyarrow" },
     { name = "pymatgen" },
+    { name = "setuptools" },
 ]
 
 [package.optional-dependencies]
@@ -5103,7 +5104,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "aiida-core", marker = "extra == 'aiida'", specifier = "~=2.7.0" },
-    { name = "aiida-core", extras = ["tests"], marker = "extra == 'dev'", specifier = ">=2.7.0" },
+    { name = "aiida-core", extras = ["tests"], marker = "extra == 'dev'", specifier = ">=2.7.3" },
     { name = "aiida-workgraph", marker = "extra == 'aiida'", specifier = "~=0.8.1" },
     { name = "ase", specifier = ">=3.25.0" },
     { name = "mattergen", git = "https://github.com/microsoft/mattergen?rev=94441ee60efc01e8a5651fdfddf4a147f01db057" },
@@ -5117,6 +5118,7 @@ requires-dist = [
     { name = "pymatgen", specifier = ">=2024.10.29" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.14.4" },
+    { name = "setuptools", specifier = "<81" },
 ]
 provides-extras = ["dev", "aiida", "docs"]
 
