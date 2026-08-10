@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools<81", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -44,6 +44,9 @@ docs = [
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["xtalpaint*"]
+
+[tool.setuptools.package-data]
+"*" = ["**.yaml"]
 
 # Ruff configuration
 [tool.ruff]
