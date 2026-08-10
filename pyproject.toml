@@ -16,6 +16,7 @@ dependencies = [
     "numpy>=1.26.4",
     "pyarrow>=22.0.0",
     "pymatgen>=2024.10.29",
+    "setuptools<81",   # mattergen/mp-api pull it in unpinned; 81 drops pkg_resources
 ]
 
 [project.entry-points."aiida.data"]
