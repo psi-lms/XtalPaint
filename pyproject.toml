@@ -47,7 +47,7 @@ where = ["src"]
 include = ["xtalpaint*"]
 
 [tool.setuptools.package-data]
-"*" = ["**.yaml"]
+"xtalpaint" = ["sampling_conf/**/*.yaml"]
 
 # Ruff configuration
 [tool.ruff]

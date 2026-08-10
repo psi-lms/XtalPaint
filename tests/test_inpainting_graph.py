@@ -32,7 +32,7 @@ _RELAX_PASSES = {
 # resolves relative to its install location and does not exist for wheel
 # installs (e.g. in CI).
 _SAMPLING_CONF = str(
-    (Path(__file__).parent.parent / "mattergen-configs" / "sampling_conf").resolve()
+    (Path(__file__).parent.parent / "src" / "xtalpaint" / "sampling_conf").resolve()
 )
 
 _INPAINTING = dict(
