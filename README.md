@@ -110,7 +110,7 @@ config = InpaintingConfig(
     n_corrector_steps=1,
     batch_size=100,
     record_trajectories=False,
-    sampling_config_path=None, # Potentially change it to point to the mattergen sampling config directory
+    sampling_config_path=None, # ``None`` uses the sampling configs bundled with XtalPaint; potentially change it to point to another sampling config directory
 )
 
 results = run_inpainting_pipeline(

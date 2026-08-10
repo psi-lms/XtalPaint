@@ -124,7 +124,8 @@ inpainting=InpaintingConfig(
     # Optional
     fix_cell=True,                      # keep unit cell fixed during sampling
     record_trajectories=False,
-    sampling_config_path=None,          # override MatterGen sampling config dir
+    sampling_config_path=None,          # ``None`` uses the bundled sampling configs,
+                                        # set to override with another dir
 )
 ```
 
