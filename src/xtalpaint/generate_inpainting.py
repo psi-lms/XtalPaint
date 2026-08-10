@@ -36,6 +36,8 @@ from tqdm import tqdm
 
 from xtalpaint.data import BatchedStructures
 
+_XTALPAINT_SAMPLING_CONF = Path(__file__).parent / "sampling_conf"
+
 
 def draw_samples_from_sampler(
     sampler: PredictorCorrector,
@@ -128,6 +130,17 @@ class CrystalInpaintingGenerator(CrystalGenerator):
         """Initialize the CrystalInpaintingGenerator."""
         self.dataloader = dataloader
         super().__init__(*args, **kwargs)
+
+    def __post_init__(self) -> None:
+        """Post-init to set the sampling config path if not provided."""
+        # If not specified by the user, point to the XtalPaint one instead
+        # of the MatterGen one, which might be missing
+        if (
+            self.sampling_config_path is None
+            and _XTALPAINT_SAMPLING_CONF.is_dir()
+        ):
+            self.sampling_config_path = _XTALPAINT_SAMPLING_CONF
+        super().__post_init__()
 
     def get_condition_loader(self, *args, **kwargs):
         """Override to use the provided dataloader."""

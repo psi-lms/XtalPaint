@@ -23,13 +23,13 @@ Then, you can install the package from the GitHub repository:
 git clone https://github.com/psi-lms/XtalPaint.git
 cd XtalPaint/
 
-uv pip install .
+uv sync --active
 ```
 
 This will install the default version. If you want to use it in combination with [AiiDA](https://aiida.readthedocs.io/projects/aiida-core/en/stable/), please also install the optional dependencies:
 
 ```bash
-uv pip install .[aiida]
+uv sync --extra aiida --active
 ```
 
 ### Model checkpoints for retrained versions of MatterGen
