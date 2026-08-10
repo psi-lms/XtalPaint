@@ -132,9 +132,13 @@ class CrystalInpaintingGenerator(CrystalGenerator):
         super().__init__(*args, **kwargs)
 
     def __post_init__(self) -> None:
-        # If not specified by the user, point to the XtalPaint one instead of the 
-        # MatterGen one, which might be missing
-        if self.sampling_config_path is None and _XTALPAINT_SAMPLING_CONF.is_dir():
+        """Post-init to set the sampling config path if not provided."""
+        # If not specified by the user, point to the XtalPaint one instead
+        # of the MatterGen one, which might be missing
+        if (
+            self.sampling_config_path is None
+            and _XTALPAINT_SAMPLING_CONF.is_dir()
+        ):
             self.sampling_config_path = _XTALPAINT_SAMPLING_CONF
         super().__post_init__()
 
